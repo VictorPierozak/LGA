@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{a28c4a9a-41cd-4e62-b6d7-dea2bbdfd1e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="inc">
+      <UniqueIdentifier>{f12b1cba-76e3-497e-bebc-57c9db434281}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{bb9070f4-9ad2-4a04-8422-27ef2fab0d82}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\LGA_kernels.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="inc\CommonTypes.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\LGA_kernels.cuh">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\LGA_Simulation.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\LGA_Configuration.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\LGA_Graphics.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\default.fragment">
+      <Filter>Resources</Filter>
+    </None>
+    <None Include="resources\default.vert">
+      <Filter>Resources</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LGA_Configuration.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LGA_Graphics.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LGA_Simulation.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

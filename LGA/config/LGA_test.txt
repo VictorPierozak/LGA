@@ -1,0 +1,11 @@
+#type
+LGA
+#domain
+domain_file.bmp
+#time
+10000
+#block
+16 4 1
+#grid
+4 1 1
+
