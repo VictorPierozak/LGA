@@ -10,27 +10,43 @@
     <Filter Include="Resources">
       <UniqueIdentifier>{bb9070f4-9ad2-4a04-8422-27ef2fab0d82}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="src\LGA_kernels.cu">
-      <Filter>src</Filter>
-    </CudaCompile>
+    <Filter Include="inc\LGA">
+      <UniqueIdentifier>{e3e275a8-5d4c-4dbd-92b7-e1aba098908a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\LGA">
+      <UniqueIdentifier>{d1459708-b72e-492b-8e50-a767aa141046}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="inc\LBM">
+      <UniqueIdentifier>{1ed295f8-21a1-4569-829d-7e206c5c4255}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\LBM">
+      <UniqueIdentifier>{38707e29-e92a-475b-98ae-5dd687a54214}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\CommonTypes.h">
-      <Filter>inc</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\LGA_kernels.cuh">
-      <Filter>inc</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\LGA_Simulation.h">
-      <Filter>inc</Filter>
+      <Filter>inc\LGA</Filter>
     </ClInclude>
     <ClInclude Include="inc\LGA_Configuration.h">
-      <Filter>inc</Filter>
+      <Filter>inc\LGA</Filter>
     </ClInclude>
     <ClInclude Include="inc\LGA_Graphics.h">
-      <Filter>inc</Filter>
+      <Filter>inc\LGA</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\LGA_kernels.cuh">
+      <Filter>inc\LGA</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\LGA_Simulation.h">
+      <Filter>inc\LGA</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\CommonTypes_LBM.h">
+      <Filter>inc\LBM</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\LBM_Configuration.h">
+      <Filter>inc\LBM</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\LBM_kernels.cuh">
+      <Filter>inc\LBM</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -46,13 +62,21 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\LGA_Configuration.cpp">
-      <Filter>src</Filter>
+      <Filter>src\LGA</Filter>
     </ClCompile>
     <ClCompile Include="src\LGA_Graphics.cpp">
-      <Filter>src</Filter>
+      <Filter>src\LGA</Filter>
     </ClCompile>
     <ClCompile Include="src\LGA_Simulation.cpp">
-      <Filter>src</Filter>
+      <Filter>src\LGA</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\LGA_kernels.cu">
+      <Filter>src\LGA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="src\LBM_kernels.cu">
+      <Filter>src\LBM</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

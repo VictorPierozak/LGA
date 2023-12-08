@@ -5,8 +5,7 @@
 int main()
 {
     srand(time(NULL));
-
-    cudaDeviceReset();
+   
     LGA_Config* config = (LGA_Config*)malloc(sizeof(LGA_Config));
     config->domain_Device = NULL;
     config->domain_Host = NULL;

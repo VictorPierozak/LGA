@@ -81,10 +81,14 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="src\LBM_kernels.cu" />
     <CudaCompile Include="src\LGA_kernels.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\CommonTypes.h" />
+    <ClInclude Include="inc\CommonTypes_LBM.h" />
+    <ClInclude Include="inc\LBM_Configuration.h" />
+    <ClInclude Include="inc\LBM_kernels.cuh" />
     <ClInclude Include="inc\LGA_Configuration.h" />
     <ClInclude Include="inc\LGA_Graphics.h" />
     <ClInclude Include="inc\LGA_kernels.cuh" />
