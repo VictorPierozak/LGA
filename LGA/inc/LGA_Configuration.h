@@ -4,7 +4,18 @@
 #include<device_launch_parameters.h>
 #include"..\inc\CommonTypes.h"
 
-typedef struct 
+typedef struct
+{
+	float dx;
+	float dy;
+	float D;
+	float equalibriumStreams[4];
+	float dt;
+	float tau;
+
+}Simulation_Data;
+
+typedef struct
 {
 	Field* domain_Host;
 	Field* domain_Device;
@@ -17,6 +28,8 @@ typedef struct
 	dim3 gridSize;
 
 	// Simulation //
+	Simulation_Data simulationData;
+
 	int isWorking;
 	int shutDown;
 } LGA_Config;

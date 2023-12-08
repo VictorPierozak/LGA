@@ -8,46 +8,61 @@
 #define CONSTANT_DEVICE
 __constant__ int64_t states = 0b1111110111101100011110100110010010111001010110000011000100100000;
 
-__constant__ unsigned int NX_global = NX;   
+__constant__ unsigned int NX_global = NX;
 __constant__ unsigned int NY_global = NY;
+__constant__ float Time_coef;
+__constant__ float Eq_coef_Q1;
+__constant__ float Eq_coef_Q2;
+__constant__ float Eq_coef_Q3;
+__constant__ float Eq_coef_Q4;
 
 #endif // !CONSTANT_DEVICE
 
 
 __global__ void LGA_K_Input(Field* domain_D)
 {
-
-	int idx = threadIdx.x + blockDim.x * blockIdx.x + 
-		NX_global * (threadIdx.y + blockDim.y * blockIdx.y );
+	int idx = threadIdx.x + blockDim.x * blockIdx.x +
+		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
 
 	if (domain_D[idx].type == WALL)
 	{
 		return;
 	}
+	// ZA£O¯ENIE - MA£A LICZBA KOMÓREK GRANICZY ZE ŒCIANAMI //
 
-	int state = 4*(domain_D[idx].inputState[0] * 8
-		+ domain_D[idx].inputState[1] * 4
-		+ domain_D[idx].inputState[2] * 2
-		+ domain_D[idx].inputState[3]);
-	domain_D[idx].outputState[0] = (states >> state) & 1;
-	domain_D[idx].outputState[1] = (states >> (state + 1)) & 1; 
-	domain_D[idx].outputState[2] = (states >> (state + 2)) & 1;
-	domain_D[idx].outputState[3] = (states >> (state + 3)) & 1;
+	if (domain_D[idx + 1].type == WALL) domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
+	else domain_D[idx].inStreams[0] = domain_D[idx + 1].outStreams[2];
+
+	if (domain_D[idx + NX_global].type == WALL) domain_D[idx].inStreams[1] = domain_D[idx].outStreams[1];
+	else domain_D[idx].inStreams[1] = domain_D[idx + NX_global].outStreams[3];
+
+	if (domain_D[idx - 1].type == WALL) domain_D[idx].inStreams[2] = domain_D[idx].outStreams[2];
+	else domain_D[idx].inStreams[2] = domain_D[idx - 1].outStreams[0];
+
+	if (domain_D[idx - NX_global].type == WALL) domain_D[idx].inStreams[3] = domain_D[idx].outStreams[3];
+	else domain_D[idx].inStreams[3] = domain_D[idx - NX_global].outStreams[1];
+
+	domain_D[idx].C = domain_D[idx].inStreams[0] + domain_D[idx].inStreams[1] + domain_D[idx].inStreams[2] +
+		domain_D[idx].inStreams[3];
 }
 
 __global__ void LGA_K_Output(Field* domain_D)
 {
-	int idx = threadIdx.x + blockDim.x * blockIdx.x + 
+	int idx = threadIdx.x + blockDim.x * blockIdx.x +
 		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
 
 	if (domain_D[idx].type == WALL) {
 		return;
 	}
 
-	domain_D[idx].inputState[0] = domain_D[idx - 1].outputState[2] + domain_D[idx].outputState[0] * (domain_D[idx - 1].type == WALL);;
-	domain_D[idx].inputState[2] = domain_D[idx + 1].outputState[0] + domain_D[idx].outputState[2] * (domain_D[idx + 1].type == WALL);;
-	domain_D[idx].inputState[1] = domain_D[idx - NX_global].outputState[3] + domain_D[idx].outputState[1] * (domain_D[idx - NX_global].type == WALL);
-	domain_D[idx].inputState[3] = domain_D[idx + NX_global].outputState[1] + domain_D[idx].outputState[3] * (domain_D[idx + NX_global].type == WALL);
+	domain_D[idx].outStreams[0] = domain_D[idx].inStreams[0] + Time_coef * (
+		domain_D[idx].C * Eq_coef_Q1 - domain_D[idx].inStreams[0]);
+	domain_D[idx].outStreams[1] = domain_D[idx].inStreams[1] + Time_coef * (
+		domain_D[idx].C * Eq_coef_Q2 - domain_D[idx].inStreams[1]);
+	domain_D[idx].outStreams[2] = domain_D[idx].inStreams[2] + Time_coef * (
+		domain_D[idx].C * Eq_coef_Q3 - domain_D[idx].inStreams[2]);
+	domain_D[idx].outStreams[3] = domain_D[idx].inStreams[3] + Time_coef * (
+		domain_D[idx].C * Eq_coef_Q4 - domain_D[idx].inStreams[3]);
 }
 
 void LGA_run(LGA_Config* configuration)
@@ -70,17 +85,25 @@ __global__ void LGA_K_Draw(Field* domain_D, float* vbo)
 		return;
 	}
 
-	vbo[idx * VERTEX_SIZE + DIMENSION] = (domain_D[idx].outputState[0] + domain_D[idx].outputState[1] +
-		domain_D[idx].outputState[2] + domain_D[idx].outputState[3]) * MAX_INTENSITY * 0.25;
+	vbo[idx * VERTEX_SIZE + DIMENSION] = domain_D[idx].C * MAX_INTENSITY;
 	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;//(domain_D[idx].outputState[1] + domain_D[idx].outputState[3]) * 0.25;
 	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0;// (domain_D[idx].outputState[0] + domain_D[idx].outputState[2]) * 0.25;
 }
 
 void LGA_draw(LGA_Config* configuration, float* devPtr)
 {
-	//NX_global = configuration->nx;
-	//NY_global = configuration->ny;
 	LGA_K_Draw <<< configuration->gridSize, configuration->blockSize >>> (configuration->domain_Device, devPtr);
 	cudaDeviceSynchronize();
 }
 
+void setConstantMemory(LGA_Config* config)
+{
+	cudaMemcpyToSymbol(&NX_global, &config->nx, sizeof(unsigned int));
+	cudaMemcpyToSymbol(&NY_global, &config->ny, sizeof(unsigned int));
+	float time_coef = config->simulationData.dt / config->simulationData.tau;
+	cudaMemcpyToSymbol(&Time_coef, &time_coef, sizeof(float));
+	cudaMemcpyToSymbol(&Eq_coef_Q1, &config->simulationData.equalibriumStreams[0], sizeof(float));
+	cudaMemcpyToSymbol(&Eq_coef_Q2, &config->simulationData.equalibriumStreams[1], sizeof(float));
+	cudaMemcpyToSymbol(&Eq_coef_Q3, &config->simulationData.equalibriumStreams[2], sizeof(float));
+	cudaMemcpyToSymbol(&Eq_coef_Q4, &config->simulationData.equalibriumStreams[3], sizeof(float));
+}

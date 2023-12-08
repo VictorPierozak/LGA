@@ -10,4 +10,4 @@ void LGA_simulation(LGA_Config* configuration);
 int createEmptySpace(LGA_Config* config, unsigned int nx, unsigned int ny);
 void drawWall(LGA_Config* config, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height);
 
-void randomInitialState(LGA_Config* config, unsigned int particlesNum, unsigned int prob, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height);
+void randomInitialState(LGA_Config* config, float C_max, unsigned int prob, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height);

@@ -81,8 +81,8 @@ int createEmptySpace(LGA_Config* config, unsigned int nx, unsigned int ny)
 			config->domain_Host[x + y * nx].type = EMPTY_SPACE;
 			for (int i = 0; i < 4; i++)
 			{
-				config->domain_Host[x + y * nx].inputState[i] = 0;
-				config->domain_Host[x + y * nx].outputState[i] = 0;
+				config->domain_Host[x + y * nx].inStreams[i] = 0;
+				config->domain_Host[x + y * nx].outStreams[i] = 0;
 			}
 		}
 	}
@@ -140,6 +140,7 @@ void LGA_simulation(LGA_Config* configuration)
 	// Set up //
 	calculateBlockSize(configuration);
 	pushDomainToDevice(configuration); 
+	setConstantMemory(configuration);
 
 	// Graphics resources set up //
 	Graphics_Objects* graphicsRes = createGraphicsObjects(configuration);
@@ -196,7 +197,7 @@ void LGA_simulation(LGA_Config* configuration)
 	free(graphicsRes);
 }
 
-void randomInitialState(LGA_Config* config, unsigned int particlesNum, unsigned int prob, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height)
+void randomInitialState(LGA_Config* config, float C_max, unsigned int prob, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height)
 {
 	unsigned int counter = 0;
 	unsigned int size = config->nx * config->ny;
@@ -205,26 +206,26 @@ void randomInitialState(LGA_Config* config, unsigned int particlesNum, unsigned 
 	{ 
 		int idx = x + y*config->nx; 
 		if (config->domain_Host[idx].type == WALL) continue;
-		for(int i = 0; i < 4; i++)
-		if (((rand() % 100) > prob)  && counter < particlesNum)
+
+		if ((rand() % 100) > prob)
 		{
-			config->domain_Host[idx].outputState[i] = 1;
+			config->domain_Host[idx].C = (float)rand()/(float)RAND_MAX * C_max;
 			counter++;
 		}
 
 		config->domain_Host[idx].type = EMPTY_SPACE;
 	}
-	for (int idx = 0; idx < size; idx++)
-	{
+	//for (int idx = 0; idx < size; idx++)
+	//{
 
-		if (config->domain_Host[idx].type == WALL) {
-			continue;
-		}
+	//	if (config->domain_Host[idx].type == WALL) {
+	//		continue;
+	//	}
 
-		config->domain_Host[idx].inputState[0] = config->domain_Host[idx - 1].outputState[2];
-		config->domain_Host[idx].inputState[2] = config->domain_Host[idx + 1].outputState[0];
-		config->domain_Host[idx].inputState[1] = config->domain_Host[idx - config->nx].outputState[3];
-		config->domain_Host[idx].inputState[3] = config->domain_Host[idx + config->ny].outputState[1];
-	}
-	printf("\nParticles number: %d\n", counter);
+	//	config->domain_Host[idx].inputState[0] = config->domain_Host[idx - 1].outputState[2];
+	//	config->domain_Host[idx].inputState[2] = config->domain_Host[idx + 1].outputState[0];
+	//	config->domain_Host[idx].inputState[1] = config->domain_Host[idx - config->nx].outputState[3];
+	//	config->domain_Host[idx].inputState[3] = config->domain_Host[idx + config->ny].outputState[1];
+	//}
+	//printf("\nParticles number: %d\n", counter);
 }

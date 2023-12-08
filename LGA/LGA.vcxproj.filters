@@ -16,12 +16,6 @@
     <Filter Include="src\LGA">
       <UniqueIdentifier>{d1459708-b72e-492b-8e50-a767aa141046}</UniqueIdentifier>
     </Filter>
-    <Filter Include="inc\LBM">
-      <UniqueIdentifier>{1ed295f8-21a1-4569-829d-7e206c5c4255}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\LBM">
-      <UniqueIdentifier>{38707e29-e92a-475b-98ae-5dd687a54214}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\CommonTypes.h">
@@ -38,15 +32,6 @@
     </ClInclude>
     <ClInclude Include="inc\LGA_Simulation.h">
       <Filter>inc\LGA</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\CommonTypes_LBM.h">
-      <Filter>inc\LBM</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\LBM_Configuration.h">
-      <Filter>inc\LBM</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\LBM_kernels.cuh">
-      <Filter>inc\LBM</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -74,9 +59,6 @@
   <ItemGroup>
     <CudaCompile Include="src\LGA_kernels.cu">
       <Filter>src\LGA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="src\LBM_kernels.cu">
-      <Filter>src\LBM</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

@@ -173,10 +173,9 @@ float* generateDomainRepresentation(LGA_Config* config)
                 continue;
             }
 
-            vbo[idx * VERTEX_SIZE + DIMENSION] = (config->domain_Host[idx].outputState[0] + config->domain_Host[idx].outputState[1] +
-                config->domain_Host[idx].outputState[2] + config->domain_Host[idx].outputState[3]) * MAX_INTENSITY * 0.25;
-            vbo[idx * VERTEX_SIZE + DIMENSION + 1] = rand() / RAND_MAX;
-            vbo[idx * VERTEX_SIZE + DIMENSION + 2] = rand() / RAND_MAX;
+            vbo[idx * VERTEX_SIZE + DIMENSION] = config->domain_Host[idx].C * MAX_INTENSITY;
+            vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
+            vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0;
         }
     return vbo;
 }
