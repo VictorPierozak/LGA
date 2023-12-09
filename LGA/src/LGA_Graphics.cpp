@@ -173,7 +173,7 @@ float* generateDomainRepresentation(LGA_Config* config)
                 continue;
             }
 
-            vbo[idx * VERTEX_SIZE + DIMENSION] = config->domain_Host[idx].C * MAX_INTENSITY;
+            vbo[idx * VERTEX_SIZE + DIMENSION] = config->domain_Host[idx].ro * MAX_INTENSITY;
             vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
             vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0;
         }

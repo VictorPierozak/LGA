@@ -23,10 +23,11 @@
 typedef struct 
 {
 	int type;
-	float inStreams[4];
-	//float eqStreams[Q];
-	float outStreams[4];
-	float C;
+	float inStreams[9];
+	float eqStreams[9];
+	float outStreams[9];
+	float ro;
+	float u[2];
 } Field;
 
 // Failures - information 

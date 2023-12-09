@@ -79,11 +79,14 @@ int createEmptySpace(LGA_Config* config, unsigned int nx, unsigned int ny)
 		for (unsigned int x = 0; x < nx; x++)
 		{
 			config->domain_Host[x + y * nx].type = EMPTY_SPACE;
-			config->domain_Host[x + y * nx].C = 0;
-			for (int i = 0; i < 4; i++)
+			config->domain_Host[x + y * nx].ro = 0;
+			config->domain_Host[x + y * nx].u[0] = 0;
+			config->domain_Host[x + y * nx].u[1] = 0;
+			for (int i = 0; i < 9; i++)
 			{
 				config->domain_Host[x + y * nx].inStreams[i] = 0;
 				config->domain_Host[x + y * nx].outStreams[i] = 0;
+				config->domain_Host[x + y * nx].eqStreams[i] = 0;
 			}
 			
 		}
@@ -161,7 +164,7 @@ void LGA_simulation(LGA_Config* configuration)
 	while (!glfwWindowShouldClose(window)) {
 		// Process input
 		glfwPollEvents();
-		//Sleep(1000);
+		//Sleep(10);
 		if(isStillWorking(configuration) == 0)
 		{
 			// Update VBO //
@@ -211,21 +214,8 @@ void randomInitialState(LGA_Config* config, float C_max, unsigned int prob, unsi
 
 		if ((rand() % 100) > prob)
 		{
-			config->domain_Host[idx].C = 1; (float)rand() / (float)RAND_MAX * C_max;
+			config->domain_Host[idx].ro = 1; (float)rand() / (float)RAND_MAX * C_max;
 			counter++;
 		}
 	}
-	//for (int idx = 0; idx < size; idx++)
-	//{
-
-	//	if (config->domain_Host[idx].type == WALL) {
-	//		continue;
-	//	}
-
-	//	config->domain_Host[idx].inputState[0] = config->domain_Host[idx - 1].outputState[2];
-	//	config->domain_Host[idx].inputState[2] = config->domain_Host[idx + 1].outputState[0];
-	//	config->domain_Host[idx].inputState[1] = config->domain_Host[idx - config->nx].outputState[3];
-	//	config->domain_Host[idx].inputState[3] = config->domain_Host[idx + config->ny].outputState[1];
-	//}
-	//printf("\nParticles number: %d\n", counter);
 }

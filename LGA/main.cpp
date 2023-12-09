@@ -14,12 +14,8 @@ int main()
     config->nx = NX;
     config->ny = NY;
 
-    config->simulationData.equalibriumStreams[0] = 0.25;
-    config->simulationData.equalibriumStreams[1] = 0.25;
-    config->simulationData.equalibriumStreams[2] = 0.25;
-    config->simulationData.equalibriumStreams[3] = 0.25;
     config->simulationData.dt = 1.0;
-    config->simulationData.tau = 0.5;
+    config->simulationData.tau = 1.0;
 
     createEmptySpace(config, NX, NY);
     drawWall(config, 0, config->nx, 0, 1);

@@ -6,13 +6,8 @@
 
 typedef struct
 {
-	float dx;
-	float dy;
-	float D;
-	float equalibriumStreams[4];
 	float dt;
 	float tau;
-
 }Simulation_Data;
 
 typedef struct
