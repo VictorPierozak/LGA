@@ -3,20 +3,17 @@
 #include<stdint.h>
 #include<glfw3.h>
 
-#ifndef CONSTANT_DEVICE
-
-#define CONSTANT_DEVICE
-__constant__ int64_t states = 0b1111110111101100011110100110010010111001010110000011000100100000;
+//__constant__ int64_t states = 0b1111110111101100011110100110010010111001010110000011000100100000;
 
 __constant__ unsigned int NX_global = NX;
 __constant__ unsigned int NY_global = NY;
-__constant__ float Time_coef;
-__constant__ float Eq_coef_Q1;
-__constant__ float Eq_coef_Q2;
-__constant__ float Eq_coef_Q3;
-__constant__ float Eq_coef_Q4;
+__constant__ float Time_coef = 1.0;
+__constant__ float Eq_coef_Q1 = 0.25;
+__constant__ float Eq_coef_Q2 = 0.25;
+__constant__ float Eq_coef_Q3 = 0.25;
+__constant__ float Eq_coef_Q4 = 0.25;
 
-#endif // !CONSTANT_DEVICE
+
 
 
 __global__ void LGA_K_Input(Field* domain_D)
@@ -55,21 +52,21 @@ __global__ void LGA_K_Output(Field* domain_D)
 		return;
 	}
 
-	domain_D[idx].outStreams[0] = domain_D[idx].inStreams[0] + Time_coef * (
+	domain_D[idx].outStreams[2] = domain_D[idx].inStreams[0] + Time_coef * (
 		domain_D[idx].C * Eq_coef_Q1 - domain_D[idx].inStreams[0]);
-	domain_D[idx].outStreams[1] = domain_D[idx].inStreams[1] + Time_coef * (
+	domain_D[idx].outStreams[3] = domain_D[idx].inStreams[1] + Time_coef * (
 		domain_D[idx].C * Eq_coef_Q2 - domain_D[idx].inStreams[1]);
-	domain_D[idx].outStreams[2] = domain_D[idx].inStreams[2] + Time_coef * (
+	domain_D[idx].outStreams[0] = domain_D[idx].inStreams[2] + Time_coef * (
 		domain_D[idx].C * Eq_coef_Q3 - domain_D[idx].inStreams[2]);
-	domain_D[idx].outStreams[3] = domain_D[idx].inStreams[3] + Time_coef * (
+	domain_D[idx].outStreams[1] = domain_D[idx].inStreams[3] + Time_coef * (
 		domain_D[idx].C * Eq_coef_Q4 - domain_D[idx].inStreams[3]);
 }
 
 void LGA_run(LGA_Config* configuration)
 {
-	LGA_K_Input <<< configuration->gridSize, configuration->blockSize >>> (configuration->domain_Device);
+	LGA_K_Output <<< configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device);
 	cudaDeviceSynchronize();
-	LGA_K_Output <<< configuration->gridSize, configuration->blockSize >>> (configuration->domain_Device);
+	LGA_K_Input <<< configuration->gridSize, configuration->blockSize >>> (configuration->domain_Device);
 	cudaDeviceSynchronize();
 }
 
@@ -86,8 +83,8 @@ __global__ void LGA_K_Draw(Field* domain_D, float* vbo)
 	}
 
 	vbo[idx * VERTEX_SIZE + DIMENSION] = domain_D[idx].C * MAX_INTENSITY;
-	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;//(domain_D[idx].outputState[1] + domain_D[idx].outputState[3]) * 0.25;
-	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0;// (domain_D[idx].outputState[0] + domain_D[idx].outputState[2]) * 0.25;
+	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = domain_D[idx].C * MAX_INTENSITY;
+	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = domain_D[idx].C * MAX_INTENSITY;
 }
 
 void LGA_draw(LGA_Config* configuration, float* devPtr)
@@ -98,12 +95,12 @@ void LGA_draw(LGA_Config* configuration, float* devPtr)
 
 void setConstantMemory(LGA_Config* config)
 {
-	cudaMemcpyToSymbol(&NX_global, &config->nx, sizeof(unsigned int));
-	cudaMemcpyToSymbol(&NY_global, &config->ny, sizeof(unsigned int));
+	cudaMemcpyToSymbol("NX_global", &config->nx, sizeof(unsigned int));
+	cudaMemcpyToSymbol("NY_global", &config->ny, sizeof(unsigned int));
 	float time_coef = config->simulationData.dt / config->simulationData.tau;
-	cudaMemcpyToSymbol(&Time_coef, &time_coef, sizeof(float));
-	cudaMemcpyToSymbol(&Eq_coef_Q1, &config->simulationData.equalibriumStreams[0], sizeof(float));
-	cudaMemcpyToSymbol(&Eq_coef_Q2, &config->simulationData.equalibriumStreams[1], sizeof(float));
-	cudaMemcpyToSymbol(&Eq_coef_Q3, &config->simulationData.equalibriumStreams[2], sizeof(float));
-	cudaMemcpyToSymbol(&Eq_coef_Q4, &config->simulationData.equalibriumStreams[3], sizeof(float));
+	cudaMemcpyToSymbol("Time_coef", &time_coef, sizeof(float), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol("Eq_coef_Q1", &config->simulationData.equalibriumStreams[0], sizeof(float), 0);
+	cudaMemcpyToSymbol("Eq_coef_Q2", &config->simulationData.equalibriumStreams[1], sizeof(float), 0);
+	cudaMemcpyToSymbol("Eq_coef_Q3", &config->simulationData.equalibriumStreams[2], sizeof(float), 0);
+	cudaMemcpyToSymbol("Eq_coef_Q4", &config->simulationData.equalibriumStreams[3], sizeof(float), 0);
 }

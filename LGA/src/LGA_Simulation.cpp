@@ -79,11 +79,13 @@ int createEmptySpace(LGA_Config* config, unsigned int nx, unsigned int ny)
 		for (unsigned int x = 0; x < nx; x++)
 		{
 			config->domain_Host[x + y * nx].type = EMPTY_SPACE;
+			config->domain_Host[x + y * nx].C = 0;
 			for (int i = 0; i < 4; i++)
 			{
 				config->domain_Host[x + y * nx].inStreams[i] = 0;
 				config->domain_Host[x + y * nx].outStreams[i] = 0;
 			}
+			
 		}
 	}
 	return 0;
@@ -159,7 +161,7 @@ void LGA_simulation(LGA_Config* configuration)
 	while (!glfwWindowShouldClose(window)) {
 		// Process input
 		glfwPollEvents();
-
+		//Sleep(1000);
 		if(isStillWorking(configuration) == 0)
 		{
 			// Update VBO //
@@ -209,11 +211,9 @@ void randomInitialState(LGA_Config* config, float C_max, unsigned int prob, unsi
 
 		if ((rand() % 100) > prob)
 		{
-			config->domain_Host[idx].C = (float)rand()/(float)RAND_MAX * C_max;
+			config->domain_Host[idx].C = 1; (float)rand() / (float)RAND_MAX * C_max;
 			counter++;
 		}
-
-		config->domain_Host[idx].type = EMPTY_SPACE;
 	}
 	//for (int idx = 0; idx < size; idx++)
 	//{
