@@ -122,7 +122,7 @@ __global__ void LGA_K_Draw(Field* domain_D, float* vbo)
 	}
 
 	vbo[idx * VERTEX_SIZE + DIMENSION] = (domain_D[idx].ro)* MAX_INTENSITY;
-	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = (domain_D[idx].ro < 0)* domain_D[idx].ro * MAX_INTENSITY;
+	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = (domain_D[idx].ro < 0)*  MAX_INTENSITY;
 	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0; 
 }
 

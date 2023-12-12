@@ -214,14 +214,11 @@ void LGA_simulation(LGA_Config* configuration)
 	// Detach //
 	CloseHandle(simulation);
 
-	int i = 0;
 	// Main loop
 	while (!glfwWindowShouldClose(window)) {
 		// Process input
 		glfwPollEvents();
-		printf("%d\n", i);
-		i++;
-		Sleep(1000);
+		//Sleep(1000);
 		if(isStillWorking(configuration) == 0)
 		{
 			// Update VBO //
