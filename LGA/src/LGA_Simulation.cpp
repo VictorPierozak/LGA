@@ -32,6 +32,7 @@ DWORD WINAPI RunSimulationParallel(LPVOID configuration)
 {
 	printf("\nSimulation start\n");
 	LGA_Config* ptr = (LGA_Config*)configuration;
+	//LGA_init(ptr);
 	while (shutDown(ptr) == 0)
 	{
 		while (isStillWorking(ptr) == 0) Sleep(1);
@@ -92,6 +93,58 @@ int createEmptySpace(LGA_Config* config, unsigned int nx, unsigned int ny)
 		}
 	}
 	return 0;
+}
+
+void init(LGA_Config* config)
+{
+	for (unsigned int y = 0; y < config->ny; y++)
+	{
+		for (unsigned int x = 0; x < config->nx; x++)
+		{
+			if (config->domain_Host[x + config->nx * y].type == WALL) continue;
+			config->domain_Host[x + config->nx * y].inStreams[0] = (4.0 / 9.0) * config->domain_Host[x + config->nx * y].ro;
+
+			if (config->domain_Host[x + config->nx * y - 1].type == WALL) config->domain_Host[x + config->nx * y].inStreams[1] = (1.0 / 9.0) * config->domain_Host[x + config->nx * y].ro;
+			config->domain_Host[x + config->nx * y].inStreams[1] = (1.0 / 9.0) * config->domain_Host[x + config->nx * y - 1].ro;
+
+			if (config->domain_Host[x + config->nx * y + 1].type == WALL) config->domain_Host[x + config->nx * y].inStreams[2] = (1.0 / 9.0) * config->domain_Host[x + config->nx * y].ro;
+			config->domain_Host[x + config->nx * y].inStreams[2] = (1.0 / 9.0) * config->domain_Host[x + config->nx * y + 1].ro;
+
+			if (config->domain_Host[x + config->nx * y + config->nx].type == WALL) config->domain_Host[x + config->nx * y].inStreams[3] = (1.0 / 9.0) * config->domain_Host[x + config->nx * y].ro;
+			config->domain_Host[x + config->nx * y].inStreams[3] = (1.0 / 9.0) * config->domain_Host[x + config->nx * y + config->nx].ro;
+
+			if (config->domain_Host[x + config->nx * y - config->nx].type == WALL) config->domain_Host[x + config->nx * y].inStreams[4] = (1.0 / 9.0) * config->domain_Host[x + config->nx * y].ro;
+			config->domain_Host[x + config->nx * y].inStreams[4] = (1.0 / 9.0) * config->domain_Host[x + config->nx * y - config->nx].ro;
+
+			if (config->domain_Host[x + config->nx * y + config->nx - 1].type == WALL) config->domain_Host[x + config->nx * y].inStreams[5] = (1.0 / 36.0) * config->domain_Host[x + config->nx * y ].ro;
+			config->domain_Host[x + config->nx * y].inStreams[5] = (1.0 / 36.0) * config->domain_Host[x + config->nx * y + config->nx - 1].ro;
+
+			if (config->domain_Host[x + config->nx * y + config->nx + 1].type == WALL) config->domain_Host[x + config->nx * y].inStreams[6] = (1.0 / 36.0) * config->domain_Host[x + config->nx * y ].ro;
+			config->domain_Host[x + config->nx * y].inStreams[6] = (1.0 / 36.0) * config->domain_Host[x + config->nx * y + config->nx + 1].ro;
+
+			if (config->domain_Host[x + config->nx * y - config->nx + 1].type == WALL) config->domain_Host[x + config->nx * y].inStreams[7] = (1.0 / 36.0) * config->domain_Host[x + config->nx * y ].ro;
+			config->domain_Host[x + config->nx * y].inStreams[7] = (1.0 / 36.0) * config->domain_Host[x + config->nx * y - config->nx + 1].ro;
+
+			if (config->domain_Host[x + config->nx * y - config->nx - 1].type == WALL) config->domain_Host[x + config->nx * y].inStreams[8] = (1.0 / 36.0) * config->domain_Host[x + config->nx * y ].ro;
+			config->domain_Host[x + config->nx * y].inStreams[8] = (1.0 / 36.0) * config->domain_Host[x + config->nx * y - config->nx - 1].ro;
+			int idx = x + config->nx * y;
+
+			for (int i = 0; i < 9; i += 3)
+			{
+				config->domain_Host[idx].ro += config->domain_Host[idx].inStreams[i];
+				config->domain_Host[idx].ro += config->domain_Host[idx].inStreams[i + 1];
+				config->domain_Host[idx].ro += config->domain_Host[idx].inStreams[i + 2];
+			}
+
+			float ro_rev = (config->domain_Host[idx].ro != 0) ? (1.0f / config->domain_Host[idx].ro) : 0.0f;
+
+			config->domain_Host[idx].u[0] = (config->domain_Host[idx].inStreams[1] + config->domain_Host[idx].inStreams[5] + config->domain_Host[idx].inStreams[8] -
+				config->domain_Host[idx].inStreams[2] - config->domain_Host[idx].inStreams[6] - config->domain_Host[idx].inStreams[7]) * ro_rev;
+
+			config->domain_Host[idx].u[1] = (config->domain_Host[idx].inStreams[3] + config->domain_Host[idx].inStreams[5] + config->domain_Host[idx].inStreams[6] -
+				config->domain_Host[idx].inStreams[4] - config->domain_Host[idx].inStreams[7] - config->domain_Host[idx].inStreams[8]) * ro_rev;
+		}
+	}
 }
 
 void drawWall(LGA_Config* config, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height)
@@ -160,11 +213,15 @@ void LGA_simulation(LGA_Config* configuration)
 	simulation = CreateThread(NULL, 0, RunSimulationParallel, configuration, 0, &pid_simulation);
 	// Detach //
 	CloseHandle(simulation);
+
+	int i = 0;
 	// Main loop
 	while (!glfwWindowShouldClose(window)) {
 		// Process input
 		glfwPollEvents();
-		//Sleep(10);
+		printf("%d\n", i);
+		i++;
+		Sleep(1000);
 		if(isStillWorking(configuration) == 0)
 		{
 			// Update VBO //
@@ -202,7 +259,7 @@ void LGA_simulation(LGA_Config* configuration)
 	free(graphicsRes);
 }
 
-void randomInitialState(LGA_Config* config, float C_max, unsigned int prob, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height)
+void randomInitialState(LGA_Config* config, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height)
 {
 	unsigned int counter = 0;
 	unsigned int size = config->nx * config->ny;
@@ -212,10 +269,7 @@ void randomInitialState(LGA_Config* config, float C_max, unsigned int prob, unsi
 		int idx = x + y*config->nx; 
 		if (config->domain_Host[idx].type == WALL) continue;
 
-		if ((rand() % 100) > prob)
-		{
-			config->domain_Host[idx].ro = 1; (float)rand() / (float)RAND_MAX * C_max;
-			counter++;
-		}
+		config->domain_Host[idx].ro = (float)rand() / (float)RAND_MAX;
+
 	}
 }

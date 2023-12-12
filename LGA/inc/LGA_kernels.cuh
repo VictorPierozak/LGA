@@ -7,8 +7,10 @@ __global__ void LGA_K_Input(Field* domain_D);
 __global__ void LGA_K_Output(Field* domain_D);
 __global__ void LGA_K_Draw(Field* domain_D, float* vbo);
 __global__ void LGA_K_Equalibrium(Field* domain_D);
-
+__global__ void LGA_K_Equalibrium_Init(Field* domain_D);
 
 void setConstantMemory(LGA_Config* configuration);
 void LGA_run(LGA_Config* configuration);
+void LGA_init(LGA_Config* configuration);
 void LGA_draw(LGA_Config* configuration, float* devPtr);
+

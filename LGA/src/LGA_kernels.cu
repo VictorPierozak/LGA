@@ -56,7 +56,8 @@ __global__ void LGA_K_Input(Field* domain_D)
 		domain_D[idx].ro += domain_D[idx].inStreams[i + 2];
 	}
 
-	float ro_rev =  (domain_D[idx].ro != 0) ? (1.0f / domain_D[idx].ro) : 0;
+	float ro_rev =  (domain_D[idx].ro != 0) ? (1.0f / domain_D[idx].ro) : 0.0f;
+	
 	domain_D[idx].u[0] = (domain_D[idx].inStreams[1] + domain_D[idx].inStreams[5] + domain_D[idx].inStreams[8] -
 		domain_D[idx].inStreams[2] - domain_D[idx].inStreams[6] - domain_D[idx].inStreams[7])* ro_rev;
 
@@ -93,9 +94,20 @@ void LGA_run(LGA_Config* configuration)
 	cudaDeviceSynchronize();
 	LGA_K_Output <<< configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device);
 	cudaDeviceSynchronize();
-	LGA_K_Input <<< configuration->gridSize, configuration->blockSize >>> (configuration->domain_Device);
+	LGA_K_Input << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device);
 	cudaDeviceSynchronize();
 }
+
+void LGA_init(LGA_Config* configuration)
+{
+	LGA_K_Equalibrium_Init << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device);
+	cudaDeviceSynchronize();
+	LGA_K_Output << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device);
+	cudaDeviceSynchronize();
+	LGA_K_Input << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device);
+	cudaDeviceSynchronize();
+}
+
 
 __global__ void LGA_K_Draw(Field* domain_D, float* vbo)
 {
@@ -109,9 +121,9 @@ __global__ void LGA_K_Draw(Field* domain_D, float* vbo)
 		return;
 	}
 
-	vbo[idx * VERTEX_SIZE + DIMENSION] = domain_D[idx].ro * MAX_INTENSITY;
-	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0; domain_D[idx].ro * MAX_INTENSITY;
-	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0; domain_D[idx].ro * MAX_INTENSITY;
+	vbo[idx * VERTEX_SIZE + DIMENSION] = (domain_D[idx].ro)* MAX_INTENSITY;
+	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = (domain_D[idx].ro < 0)* domain_D[idx].ro * MAX_INTENSITY;
+	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0; 
 }
 
 void LGA_draw(LGA_Config* configuration, float* devPtr)
@@ -136,18 +148,48 @@ __global__ void LGA_K_Equalibrium(Field* domain_D)
 		return;
 	}
 
-	float u_square = 1.5 * (domain_D[idx].u[0] * domain_D[idx].u[0] + domain_D[idx].u[1] * domain_D[idx].u[1]);
+	float u_square =  1.5*(domain_D[idx].u[0] * domain_D[idx].u[0] + domain_D[idx].u[1] * domain_D[idx].u[1]);
 	domain_D[idx].eqStreams[0] = (4.0f/9.0f)*domain_D[idx].ro*(1.0f - u_square);
-	domain_D[idx].eqStreams[1] = 1.0f / 9.0f *domain_D[idx].ro*(1.0f + 3.0f * domain_D[idx].u[0] + 4.5* domain_D[idx].u[0]* domain_D[idx].u[0] - u_square);
-	domain_D[idx].eqStreams[2] =1.0f/9.0f*domain_D[idx].ro*(1.0f - 3.0f * domain_D[idx].u[0] + 4.5 * domain_D[idx].u[0] * domain_D[idx].u[0] - u_square);
-	domain_D[idx].eqStreams[3] =1.0f/9.0f * domain_D[idx].ro * (1.0f + 3.0f * domain_D[idx].u[1] + 4.5 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
-	domain_D[idx].eqStreams[4] =1.0f/9.0f * domain_D[idx].ro * (1.0f - 3.0f * domain_D[idx].u[1] + 4.5 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
-	domain_D[idx].eqStreams[5] = 1.0f / 36.0f * domain_D[idx].ro * (1.0f + 3.0f * (domain_D[idx].u[0] + domain_D[idx].u[1]) + 
+
+	domain_D[idx].eqStreams[1] = (1.0f / 9.0f) * domain_D[idx].ro*(1.0f + 3.0f * domain_D[idx].u[0] + 4.5* domain_D[idx].u[0]* domain_D[idx].u[0] - u_square);
+	domain_D[idx].eqStreams[2] = (1.0f/9.0f) * domain_D[idx].ro*(1.0f - 3.0f * domain_D[idx].u[0] + 4.5 * domain_D[idx].u[0] * domain_D[idx].u[0] - u_square);
+	domain_D[idx].eqStreams[3] = (1.0f/9.0f) * domain_D[idx].ro * (1.0f + 3.0f * domain_D[idx].u[1] + 4.5 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
+	domain_D[idx].eqStreams[4] = (1.0f/9.0f) * domain_D[idx].ro * (1.0f - 3.0f * domain_D[idx].u[1] + 4.5 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
+	
+	domain_D[idx].eqStreams[5] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 3.0f * (domain_D[idx].u[0] + domain_D[idx].u[1]) + 
 		4.5 * (domain_D[idx].u[0] + domain_D[idx].u[1]) * (domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
-	domain_D[idx].eqStreams[6] = 1.0f / 36.0f * domain_D[idx].ro * (1.0f + 3.0f * (- domain_D[idx].u[0] + domain_D[idx].u[1]) +
-		4.5 * (- domain_D[idx].u[0] + domain_D[idx].u[1]) * (- domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
-	domain_D[idx].eqStreams[7] = 1.0f / 36.0f * domain_D[idx].ro * (1.0f + 3.0f * (-domain_D[idx].u[0] - domain_D[idx].u[1]) +
-		4.5 * (-domain_D[idx].u[0] - domain_D[idx].u[1]) * (-domain_D[idx].u[0] - domain_D[idx].u[1]) - u_square);;
-	domain_D[idx].eqStreams[8] = 1.0f / 36.0f * domain_D[idx].ro * (1.0f + 3.0f * (domain_D[idx].u[0] + domain_D[idx].u[1]) +
-		4.5 * (domain_D[idx].u[0] + domain_D[idx].u[1]) * (domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
+
+	domain_D[idx].eqStreams[6] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 3.0f * (-domain_D[idx].u[0] + domain_D[idx].u[1]) +
+		4.5 * (-domain_D[idx].u[0] + domain_D[idx].u[1]) * (-domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
+
+	domain_D[idx].eqStreams[7] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 3.0f * (-domain_D[idx].u[0] - domain_D[idx].u[1]) +
+		4.5 * (-domain_D[idx].u[0] - domain_D[idx].u[1]) * (-domain_D[idx].u[0] - domain_D[idx].u[1]) - u_square);
+
+	domain_D[idx].eqStreams[8] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 3.0f * (domain_D[idx].u[0] - domain_D[idx].u[1]) +
+		4.5 * (domain_D[idx].u[0] - domain_D[idx].u[1]) * (domain_D[idx].u[0] - domain_D[idx].u[1]) - u_square);
+}
+
+__global__ void LGA_K_Equalibrium_Init(Field* domain_D)
+{
+	int idx = threadIdx.x + blockDim.x * blockIdx.x +
+		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+	if (domain_D[idx].type == WALL) {
+		return;
+	}
+
+	float u_square = 1.5 * (domain_D[idx].u[0] * domain_D[idx].u[0] + domain_D[idx].u[1] * domain_D[idx].u[1]);
+	domain_D[idx].eqStreams[0] = (4.0f / 9.0f) * domain_D[idx].ro;
+
+	domain_D[idx].eqStreams[1] = 1.0f / 9.0f * domain_D[idx].ro ;
+	domain_D[idx].eqStreams[2] = 1.0f / 9.0f * domain_D[idx].ro ;
+	domain_D[idx].eqStreams[3] = 1.0f / 9.0f * domain_D[idx].ro ;
+	domain_D[idx].eqStreams[4] = 1.0f / 9.0f * domain_D[idx].ro ;
+
+	domain_D[idx].eqStreams[5] = 1.0f / 36.0f * domain_D[idx].ro ;
+
+	domain_D[idx].eqStreams[6] = 1.0f / 36.0f * domain_D[idx].ro ;
+
+	domain_D[idx].eqStreams[7] = 1.0f / 36.0f * domain_D[idx].ro;
+
+	domain_D[idx].eqStreams[8] = 1.0f / 36.0f * domain_D[idx].ro ;
 }
