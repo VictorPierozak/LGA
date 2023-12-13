@@ -80,7 +80,7 @@ int createEmptySpace(LGA_Config* config, unsigned int nx, unsigned int ny)
 		for (unsigned int x = 0; x < nx; x++)
 		{
 			config->domain_Host[x + y * nx].type = EMPTY_SPACE;
-			config->domain_Host[x + y * nx].ro = 0;
+			config->domain_Host[x + y * nx].ro = 0.2;
 			config->domain_Host[x + y * nx].u[0] = 0;
 			config->domain_Host[x + y * nx].u[1] = 0;
 			for (int i = 0; i < 9; i++)

@@ -148,25 +148,25 @@ __global__ void LGA_K_Equalibrium(Field* domain_D)
 		return;
 	}
 
-	float u_square =  1.5*(domain_D[idx].u[0] * domain_D[idx].u[0] + domain_D[idx].u[1] * domain_D[idx].u[1]);
+	float u_square =  0.5*(domain_D[idx].u[0] * domain_D[idx].u[0] + domain_D[idx].u[1] * domain_D[idx].u[1]);
 	domain_D[idx].eqStreams[0] = (4.0f/9.0f)*domain_D[idx].ro*(1.0f - u_square);
 
-	domain_D[idx].eqStreams[1] = (1.0f / 9.0f) * domain_D[idx].ro*(1.0f + 3.0f * domain_D[idx].u[0] + 4.5* domain_D[idx].u[0]* domain_D[idx].u[0] - u_square);
-	domain_D[idx].eqStreams[2] = (1.0f/9.0f) * domain_D[idx].ro*(1.0f - 3.0f * domain_D[idx].u[0] + 4.5 * domain_D[idx].u[0] * domain_D[idx].u[0] - u_square);
-	domain_D[idx].eqStreams[3] = (1.0f/9.0f) * domain_D[idx].ro * (1.0f + 3.0f * domain_D[idx].u[1] + 4.5 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
-	domain_D[idx].eqStreams[4] = (1.0f/9.0f) * domain_D[idx].ro * (1.0f - 3.0f * domain_D[idx].u[1] + 4.5 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
+	domain_D[idx].eqStreams[1] = (1.0f / 9.0f) * domain_D[idx].ro*(1.0f + 1.0f * domain_D[idx].u[0] + 0.5* domain_D[idx].u[0]* domain_D[idx].u[0] - u_square);
+	domain_D[idx].eqStreams[2] = (1.0f/9.0f) * domain_D[idx].ro*(1.0f - 1.0f * domain_D[idx].u[0] + 0.5 * domain_D[idx].u[0] * domain_D[idx].u[0] - u_square);
+	domain_D[idx].eqStreams[3] = (1.0f/9.0f) * domain_D[idx].ro * (1.0f + 1.0f * domain_D[idx].u[1] + 0.5 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
+	domain_D[idx].eqStreams[4] = (1.0f/9.0f) * domain_D[idx].ro * (1.0f - 1.0f * domain_D[idx].u[1] + 0.5 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
 	
-	domain_D[idx].eqStreams[5] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 3.0f * (domain_D[idx].u[0] + domain_D[idx].u[1]) + 
-		4.5 * (domain_D[idx].u[0] + domain_D[idx].u[1]) * (domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
+	domain_D[idx].eqStreams[5] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 1.0f * (domain_D[idx].u[0] + domain_D[idx].u[1]) + 
+		0.5 * (domain_D[idx].u[0] + domain_D[idx].u[1]) * (domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
 
-	domain_D[idx].eqStreams[6] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 3.0f * (-domain_D[idx].u[0] + domain_D[idx].u[1]) +
-		4.5 * (-domain_D[idx].u[0] + domain_D[idx].u[1]) * (-domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
+	domain_D[idx].eqStreams[6] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 1.0f * (-domain_D[idx].u[0] + domain_D[idx].u[1]) +
+		0.5 * (-domain_D[idx].u[0] + domain_D[idx].u[1]) * (-domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
 
-	domain_D[idx].eqStreams[7] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 3.0f * (-domain_D[idx].u[0] - domain_D[idx].u[1]) +
-		4.5 * (-domain_D[idx].u[0] - domain_D[idx].u[1]) * (-domain_D[idx].u[0] - domain_D[idx].u[1]) - u_square);
+	domain_D[idx].eqStreams[7] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 1.0f * (-domain_D[idx].u[0] - domain_D[idx].u[1]) +
+		0.5 * (-domain_D[idx].u[0] - domain_D[idx].u[1]) * (-domain_D[idx].u[0] - domain_D[idx].u[1]) - u_square);
 
-	domain_D[idx].eqStreams[8] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 3.0f * (domain_D[idx].u[0] - domain_D[idx].u[1]) +
-		4.5 * (domain_D[idx].u[0] - domain_D[idx].u[1]) * (domain_D[idx].u[0] - domain_D[idx].u[1]) - u_square);
+	domain_D[idx].eqStreams[8] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 1.0f * (domain_D[idx].u[0] - domain_D[idx].u[1]) +
+		0.5 * (domain_D[idx].u[0] - domain_D[idx].u[1]) * (domain_D[idx].u[0] - domain_D[idx].u[1]) - u_square);
 }
 
 __global__ void LGA_K_Equalibrium_Init(Field* domain_D)
