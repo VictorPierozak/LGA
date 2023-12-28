@@ -11,4 +11,7 @@ int createEmptySpace(LGA_Config* config, unsigned int nx, unsigned int ny);
 void drawWall(LGA_Config* config, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height);
 
 void randomInitialState(LGA_Config* config, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height);
-void init(LGA_Config* config);
+
+
+void calcRelaxationTime(LGA_Config* config);
+void calcLatticeSoundSpeed(LGA_Config* config);

@@ -14,8 +14,8 @@ int main()
     config->nx = NX;
     config->ny = NY;
 
-    config->simulationData.dt = 1.0;
-    config->simulationData.tau = 2.0;
+    config->simulationData.dt = 1;
+    config->simulationData.tau = 0.5;
 
     createEmptySpace(config, NX, NY);
     drawWall(config, 0, config->nx, 0, 1);
@@ -31,8 +31,10 @@ int main()
 
 
     randomInitialState(config, 0, config->nx / 5 + 1, 0, config->ny);
+    randomInitialState(config, 4* config->nx / 5 , config->nx/5-1, 0, config->ny);
     //init(config);
     //randomInitialState(config, 0, config->nx, 0, config->ny);
+    //randomInitialState(config, config->nx/5, config->nx/4, config->nx/5, config->ny/4);
     LGA_simulation(config);
     free(config->domain_Host);
     return 0;

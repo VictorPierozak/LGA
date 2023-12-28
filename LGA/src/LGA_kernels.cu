@@ -3,11 +3,20 @@
 #include<stdint.h>
 #include<glfw3.h>
 
+#define C_1 2.7632
+#define C_2 3.8177
+#define C_3 1.3816
+
+#define FIELD 0
+
 //__constant__ int64_t states = 0b1111110111101100011110100110010010111001010110000011000100100000;
 
 __constant__ unsigned int NX_global = NX;
 __constant__ unsigned int NY_global = NY;
 __constant__ float Time_coef = 1.0f;
+__constant__ float COEF_1;
+__constant__ float COEF_2;
+__constant__ float COEF_3;
 
 
 __global__ void LGA_K_Input(Field* domain_D)
@@ -55,6 +64,7 @@ __global__ void LGA_K_Input(Field* domain_D)
 		domain_D[idx].ro += domain_D[idx].inStreams[i + 1];
 		domain_D[idx].ro += domain_D[idx].inStreams[i + 2];
 	}
+	//domain_D[idx].ro = domain_D[idx].ro * (domain_D[idx].ro > 0);
 
 	float ro_rev =  (domain_D[idx].ro != 0) ? (1.0f / domain_D[idx].ro) : 0.0f;
 	
@@ -98,17 +108,6 @@ void LGA_run(LGA_Config* configuration)
 	cudaDeviceSynchronize();
 }
 
-void LGA_init(LGA_Config* configuration)
-{
-	LGA_K_Equalibrium_Init << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device);
-	cudaDeviceSynchronize();
-	LGA_K_Output << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device);
-	cudaDeviceSynchronize();
-	LGA_K_Input << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device);
-	cudaDeviceSynchronize();
-}
-
-
 __global__ void LGA_K_Draw(Field* domain_D, float* vbo)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
@@ -120,10 +119,12 @@ __global__ void LGA_K_Draw(Field* domain_D, float* vbo)
 		vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
 		return;
 	}
+	double u = sqrt(domain_D[idx].u[0] * domain_D[idx].u[0] + domain_D[idx].u[1] * domain_D[idx].u[1]);
+	double param = (FIELD == 0) ? domain_D[idx].ro : u;
 
-	vbo[idx * VERTEX_SIZE + DIMENSION] = (domain_D[idx].ro)* MAX_INTENSITY;
-	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = (domain_D[idx].ro < 0)*  MAX_INTENSITY;
-	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0; 
+	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = domain_D[idx].ro; //(param < 0.3) * (param + 0.3);
+	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = domain_D[idx].ro; // (param >= 0.3 && param < 0.6)* (param + 0.3);//(domain_D[idx].ro)*  MAX_INTENSITY;
+	vbo[idx * VERTEX_SIZE + DIMENSION] = domain_D[idx].ro; 
 }
 
 void LGA_draw(LGA_Config* configuration, float* devPtr)
@@ -138,6 +139,12 @@ void setConstantMemory(LGA_Config* config)
 	cudaMemcpyToSymbol("NY_global", &config->ny, sizeof(unsigned int));
 	float time_coef = config->simulationData.dt / config->simulationData.tau;
 	cudaMemcpyToSymbol("Time_coef", &time_coef, sizeof(float), 0, cudaMemcpyHostToDevice);
+	float c1 = 1 / (config->cs * config->cs);
+	float c3 = c1 * 0.5;
+	float c2 = c3 * c1;
+	cudaMemcpyToSymbol("COEF_1", &c1, sizeof(float), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol("COEF_2", &c1, sizeof(float), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol("COEF_3", &c1, sizeof(float), 0, cudaMemcpyHostToDevice);
 }
 
 __global__ void LGA_K_Equalibrium(Field* domain_D)
@@ -148,48 +155,24 @@ __global__ void LGA_K_Equalibrium(Field* domain_D)
 		return;
 	}
 
-	float u_square =  0.5*(domain_D[idx].u[0] * domain_D[idx].u[0] + domain_D[idx].u[1] * domain_D[idx].u[1]);
+	float u_square =  COEF_3*(domain_D[idx].u[0] * domain_D[idx].u[0] + domain_D[idx].u[1] * domain_D[idx].u[1]);
 	domain_D[idx].eqStreams[0] = (4.0f/9.0f)*domain_D[idx].ro*(1.0f - u_square);
 
-	domain_D[idx].eqStreams[1] = (1.0f / 9.0f) * domain_D[idx].ro*(1.0f + 1.0f * domain_D[idx].u[0] + 0.5* domain_D[idx].u[0]* domain_D[idx].u[0] - u_square);
-	domain_D[idx].eqStreams[2] = (1.0f/9.0f) * domain_D[idx].ro*(1.0f - 1.0f * domain_D[idx].u[0] + 0.5 * domain_D[idx].u[0] * domain_D[idx].u[0] - u_square);
-	domain_D[idx].eqStreams[3] = (1.0f/9.0f) * domain_D[idx].ro * (1.0f + 1.0f * domain_D[idx].u[1] + 0.5 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
-	domain_D[idx].eqStreams[4] = (1.0f/9.0f) * domain_D[idx].ro * (1.0f - 1.0f * domain_D[idx].u[1] + 0.5 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
+	domain_D[idx].eqStreams[1] = (1.0f / 9.0f) * domain_D[idx].ro*(1.0f + COEF_1 * domain_D[idx].u[0] + COEF_2* domain_D[idx].u[0]* domain_D[idx].u[0] - u_square);
+	domain_D[idx].eqStreams[2] = (1.0f/9.0f) * domain_D[idx].ro*(1.0f - COEF_1 * domain_D[idx].u[0] + COEF_2 * domain_D[idx].u[0] * domain_D[idx].u[0] - u_square);
+	domain_D[idx].eqStreams[3] = (1.0f/9.0f) * domain_D[idx].ro * (1.0f + COEF_1 * domain_D[idx].u[1] + COEF_2 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
+	domain_D[idx].eqStreams[4] = (1.0f/9.0f) * domain_D[idx].ro * (1.0f - COEF_1 * domain_D[idx].u[1] + COEF_2 * domain_D[idx].u[1] * domain_D[idx].u[1] - u_square);
 	
-	domain_D[idx].eqStreams[5] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 1.0f * (domain_D[idx].u[0] + domain_D[idx].u[1]) + 
-		0.5 * (domain_D[idx].u[0] + domain_D[idx].u[1]) * (domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
+	domain_D[idx].eqStreams[5] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + COEF_1 * (domain_D[idx].u[0] + domain_D[idx].u[1]) + 
+		COEF_2 * (domain_D[idx].u[0] + domain_D[idx].u[1]) * (domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
 
-	domain_D[idx].eqStreams[6] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 1.0f * (-domain_D[idx].u[0] + domain_D[idx].u[1]) +
-		0.5 * (-domain_D[idx].u[0] + domain_D[idx].u[1]) * (-domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
+	domain_D[idx].eqStreams[6] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + COEF_1 * (-domain_D[idx].u[0] + domain_D[idx].u[1]) +
+		COEF_2 * (-domain_D[idx].u[0] + domain_D[idx].u[1]) * (-domain_D[idx].u[0] + domain_D[idx].u[1]) - u_square);
 
-	domain_D[idx].eqStreams[7] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 1.0f * (-domain_D[idx].u[0] - domain_D[idx].u[1]) +
-		0.5 * (-domain_D[idx].u[0] - domain_D[idx].u[1]) * (-domain_D[idx].u[0] - domain_D[idx].u[1]) - u_square);
+	domain_D[idx].eqStreams[7] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + COEF_1 * (-domain_D[idx].u[0] - domain_D[idx].u[1]) +
+		COEF_2 * (-domain_D[idx].u[0] - domain_D[idx].u[1]) * (-domain_D[idx].u[0] - domain_D[idx].u[1]) - u_square);
 
-	domain_D[idx].eqStreams[8] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + 1.0f * (domain_D[idx].u[0] - domain_D[idx].u[1]) +
-		0.5 * (domain_D[idx].u[0] - domain_D[idx].u[1]) * (domain_D[idx].u[0] - domain_D[idx].u[1]) - u_square);
+	domain_D[idx].eqStreams[8] = (1.0f / 36.0f) * domain_D[idx].ro * (1.0f + COEF_1 * (domain_D[idx].u[0] - domain_D[idx].u[1]) +
+		COEF_2 * (domain_D[idx].u[0] - domain_D[idx].u[1]) * (domain_D[idx].u[0] - domain_D[idx].u[1]) - u_square);
 }
 
-__global__ void LGA_K_Equalibrium_Init(Field* domain_D)
-{
-	int idx = threadIdx.x + blockDim.x * blockIdx.x +
-		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
-	if (domain_D[idx].type == WALL) {
-		return;
-	}
-
-	float u_square = 1.5 * (domain_D[idx].u[0] * domain_D[idx].u[0] + domain_D[idx].u[1] * domain_D[idx].u[1]);
-	domain_D[idx].eqStreams[0] = (4.0f / 9.0f) * domain_D[idx].ro;
-
-	domain_D[idx].eqStreams[1] = 1.0f / 9.0f * domain_D[idx].ro ;
-	domain_D[idx].eqStreams[2] = 1.0f / 9.0f * domain_D[idx].ro ;
-	domain_D[idx].eqStreams[3] = 1.0f / 9.0f * domain_D[idx].ro ;
-	domain_D[idx].eqStreams[4] = 1.0f / 9.0f * domain_D[idx].ro ;
-
-	domain_D[idx].eqStreams[5] = 1.0f / 36.0f * domain_D[idx].ro ;
-
-	domain_D[idx].eqStreams[6] = 1.0f / 36.0f * domain_D[idx].ro ;
-
-	domain_D[idx].eqStreams[7] = 1.0f / 36.0f * domain_D[idx].ro;
-
-	domain_D[idx].eqStreams[8] = 1.0f / 36.0f * domain_D[idx].ro ;
-}

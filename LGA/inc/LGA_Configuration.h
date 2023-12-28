@@ -17,6 +17,14 @@ typedef struct
 	unsigned int nx;
 	unsigned int ny;
 
+	// //
+	double dx;
+	double dt;
+	double fluidRo;
+	double dynamicViscousity;
+	double relaxationTime;
+	double cs;
+
 	// CUDA related variables //
 
 	dim3 blockSize;
