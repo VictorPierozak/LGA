@@ -3,8 +3,8 @@
 #include<stdio.h>
 #include<string.h>
 
-#define NX 1024
-#define NY 1024
+#define NX 128
+#define NY 128
 
 #define EMPTY_SPACE 0
 #define WALL 1

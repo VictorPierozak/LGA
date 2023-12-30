@@ -214,7 +214,9 @@ void LGA_simulation(LGA_Config* configuration)
 		// Swap front and back buffers
 		glClearColor(0.0f, 0.4f, 0.5f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glDrawArrays(GL_POINTS, 0, configuration->nx*configuration->ny);
+		//glDrawArrays(GL_TRIANGLES, 0, 4*configuration->nx*configuration->ny);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, graphicsRes->ebo);
+		glDrawElements(GL_TRIANGLES, configuration->nx * configuration->ny * 6, GL_UNSIGNED_INT, 0);
 		glfwSwapBuffers(window);
 	}
 	EnterCriticalSection(&accessShutDown);

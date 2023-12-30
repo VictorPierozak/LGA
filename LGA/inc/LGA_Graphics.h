@@ -7,6 +7,7 @@ typedef struct
 {
 	GLuint vao;
 	GLuint vbo;
+	GLuint ebo;
 	GLuint shaderProgram;
 	cudaGraphicsResource_t cudaResources;
 	GLfloat* devPtr;

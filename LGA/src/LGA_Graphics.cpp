@@ -34,7 +34,7 @@ void createVBO(Graphics_Objects* objs, LGA_Config* config)
 	glGenBuffers(1, &objs->vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, objs->vbo);
     float* vbo = generateDomainRepresentation(config);
-	glBufferData(GL_ARRAY_BUFFER, VERTEX_SIZE * config->nx * config->ny*sizeof(float), vbo, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, objs->vboSize, vbo, GL_STATIC_DRAW);
     free(vbo);
 }
 
@@ -47,6 +47,31 @@ void createVAO(Graphics_Objects* objs)
 	glVertexAttribPointer(POS_LOCATION, DIMENSION, GL_FLOAT, GL_FALSE, VERTEX_SIZE * sizeof(GLfloat), (void*)0);
 	glEnableVertexAttribArray(COLOR_LOCATION);
 	glVertexAttribPointer(COLOR_LOCATION, COLOR_ATTRIB, GL_FLOAT, GL_FALSE, VERTEX_SIZE * sizeof(GLfloat), (void*)(DIMENSION * sizeof(GLfloat)));
+}
+
+void createEBO(Graphics_Objects* objs, LGA_Config* config)
+{
+    unsigned int* ebo = (unsigned int*)malloc(sizeof(float) * config->nx * config->ny * 6);
+
+    int f = 0;
+    for (int t = 0; t < config->nx * config->ny * 2; t+=2)
+    {
+        ebo[t * 3] = f;
+        ebo[t * 3 + 1] = f + 1;
+        ebo[t * 3 + 2] = f + 2;
+
+        ebo[t * 3 + 3] = f + 3;
+        ebo[t * 3 + 4] = f + 1;
+        ebo[t * 3 + 5] = f + 2;
+
+        f += 4;
+    }
+
+    glGenBuffers(1, &objs->ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, objs->ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(float) * config->nx * config->ny * 6, ebo, GL_STATIC_DRAW);
+   // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, objs->ebo);
+    free(ebo);
 }
 
 void compileProgram(Graphics_Objects* objs, const char* vertexShader, const char* fragmentShader)
@@ -122,12 +147,14 @@ Graphics_Objects* createGraphicsObjects(LGA_Config* config)
     glewInit();
 
     Graphics_Objects* gobjs = (Graphics_Objects*) malloc(sizeof(Graphics_Objects));
+    gobjs->vboSize = sizeof(float) * config->nx * config->ny * 4 * VERTEX_SIZE; // (4 + 2 * VERTEX_SIZE * (config->nx - 2) + 2 * (config->ny - 2) + 4 * (config->nx - 2)* (config->ny - 2));
     compileProgram(gobjs, DEFAULT_VERTEX_SHADER, DEFAULT_FRAGMENT_SHADER);
     createVBO(gobjs, config);
+    createEBO(gobjs, config);
     createVAO(gobjs);
     glUseProgram(gobjs->shaderProgram);
 
-    // CUDA ///
+    // CUDA //
     if (cudaGraphicsGLRegisterBuffer(&gobjs->cudaResources, gobjs->vbo, cudaGraphicsMapFlagsWriteDiscard) != cudaSuccess)
     {
         printf("\nResources cannot be registered!\n");
@@ -157,25 +184,36 @@ void releaseOpenGLResources(Graphics_Objects* objs)
 
 float* generateDomainRepresentation(LGA_Config* config)
 {
-    float* vbo = (float*)malloc(sizeof(float) * config->nx * config->ny * VERTEX_SIZE);
+    float* vbo = (float*)malloc(sizeof(float) * VERTEX_SIZE * config->nx * config->ny * 4);
 
     for (unsigned int y = 0; y < config->ny; y++)
         for (unsigned int x = 0; x < config->nx; x++)
         {
-            int idx = x + y * config->nx;
-            vbo[idx * VERTEX_SIZE] = 1.9*( - 0.5 + ((float)x) / ((float)config->nx) );
-            vbo[idx * VERTEX_SIZE + 1] = 1.9*( - 0.5 + ((float)y) / ((float)config->ny));
+            int v = 0;
+            unsigned int idx = x + y * config->nx;
+            for (int k = 0; k < 2; k++)
+            {
+                for (int p = 0; p < 2; p++)
+                {
+                    
+                    vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE] = 1.9 * (-0.5 + ((float)(x + k)) / ((float)config->nx ));
+                    vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + 1] = 1.9 * (-0.5 + ((float)(y + p)) / ((float)config->ny ));
 
-            if (config->domain_Host[idx].type == WALL) {
-                vbo[idx * VERTEX_SIZE + DIMENSION] = 0;
-                vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
-                vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
-                continue;
+                    if (config->domain_Host[idx].type == WALL) {
+                        vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = 0;
+                        vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = 0;
+                        vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
+                        v++;
+                        continue;
+                    }
+
+                    vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = config->domain_Host[idx].ro * MAX_INTENSITY;
+                    vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = 0;
+                    vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = 0;
+
+                    v++;
+                }
             }
-
-            vbo[idx * VERTEX_SIZE + DIMENSION] = config->domain_Host[idx].ro * MAX_INTENSITY;
-            vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
-            vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0;
         }
     return vbo;
 }

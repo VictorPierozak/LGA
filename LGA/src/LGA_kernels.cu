@@ -112,16 +112,19 @@ __global__ void LGA_K_Draw(Field* domain_D, float* vbo, Visualisation* visualisa
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
 		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+	for (int v = 0; v < 4; v++)
+	{
+		if (domain_D[idx].type == WALL) {
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = 0;
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = 0;
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
+			continue;
+		}
 
-	if (domain_D[idx].type == WALL) {
-		vbo[idx * VERTEX_SIZE + DIMENSION] = 0;
-		vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
-		vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
-		return;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = visualisation_D->amplifier * domain_D[idx].ro;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * domain_D[idx].ro;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * domain_D[idx].ro;
 	}
-	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = visualisation_D->amplifier * domain_D[idx].ro; 
-	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * domain_D[idx].ro;
-	vbo[idx * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * domain_D[idx].ro;
 }
 
 __global__ void LGA_K_Draw_Density(Field* domain_D, float* vbo, Visualisation* visualisation_D)
@@ -129,34 +132,40 @@ __global__ void LGA_K_Draw_Density(Field* domain_D, float* vbo, Visualisation* v
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
 		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
 
-	if (domain_D[idx].type == WALL) {
-		vbo[idx * VERTEX_SIZE + DIMENSION] = 0;
-		vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
-		vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
-		return;
-	}
+	for (int v = 0; v < 4; v++)
+	{
+		if (domain_D[idx].type == WALL) {
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = 0;
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = 0;
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
+			continue;
+		}
 
-	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = visualisation_D->amplifier * domain_D[idx].ro;
-	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * domain_D[idx].ro;
-	vbo[idx * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * domain_D[idx].ro;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = visualisation_D->amplifier * domain_D[idx].ro;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * domain_D[idx].ro;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * domain_D[idx].ro;
+	}
 }
 
 __global__ void LGA_K_Draw_Velocity_Norm(Field* domain_D, float* vbo, Visualisation* visualisation_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
 		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+	
+	for (int v = 0; v < 4; v++)
+	{
+		if (domain_D[idx].type == WALL) {
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = 0;
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = 0;
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
+			continue;
+		}
+		float velocity = sqrt(domain_D[idx].u[0] * domain_D[idx].u[0] + (domain_D[idx].u[1] * domain_D[idx].u[1]));
 
-	if (domain_D[idx].type == WALL) {
-		vbo[idx * VERTEX_SIZE + DIMENSION] = 0;
-		vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
-		vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
-		return;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = visualisation_D->amplifier * velocity;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * velocity;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * velocity;
 	}
-	float velocity = sqrt(domain_D[idx].u[0] * domain_D[idx].u[0] + (domain_D[idx].u[1] * domain_D[idx].u[1]));
-
-	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = visualisation_D->amplifier * velocity;
-	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * velocity;
-	vbo[idx * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * velocity;
 }
 
 __global__ void LGA_K_Draw_Velocity_Horizontal(Field* domain_D, float* vbo, Visualisation* visualisation_D)
@@ -164,16 +173,20 @@ __global__ void LGA_K_Draw_Velocity_Horizontal(Field* domain_D, float* vbo, Visu
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
 		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
 
+	for (int v = 0; v < 4; v++)
+	{
+
 	if (domain_D[idx].type == WALL) {
-		vbo[idx * VERTEX_SIZE + DIMENSION] = 0;
-		vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
-		vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
-		return;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = 0;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = 0;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
+		continue;
 	}
 	
-	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0;
-	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * abs(domain_D[idx].u[0]) * (domain_D[idx].u[0] > 0);
-	vbo[idx * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * abs(domain_D[idx].u[0]) * (domain_D[idx].u[0] < 0);
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = 0;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * abs(domain_D[idx].u[0]) * (domain_D[idx].u[0] > 0);
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * abs(domain_D[idx].u[0]) * (domain_D[idx].u[0] < 0);
+	}
 }
 
 __global__ void LGA_K_Draw_Velocity_Vertical(Field* domain_D, float* vbo, Visualisation* visualisation_D)
@@ -181,16 +194,19 @@ __global__ void LGA_K_Draw_Velocity_Vertical(Field* domain_D, float* vbo, Visual
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
 		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
 
-	if (domain_D[idx].type == WALL) {
-		vbo[idx * VERTEX_SIZE + DIMENSION] = 0;
-		vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
-		vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
-		return;
-	}
+	for (int v = 0; v < 4; v++)
+	{
+		if (domain_D[idx].type == WALL) {
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = 0;
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = 0;
+			vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
+			continue;
+		}
 
-	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0;
-	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * abs(domain_D[idx].u[1]) * (domain_D[idx].u[1] > 0);
-	vbo[idx * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * abs(domain_D[idx].u[1])* (domain_D[idx].u[1] < 0);
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 2] = 0;
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * abs(domain_D[idx].u[1]) * (domain_D[idx].u[1] > 0);
+		vbo[idx * VERTEX_SIZE * 4 + v * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * abs(domain_D[idx].u[1]) * (domain_D[idx].u[1] < 0);
+	}
 }
 
 void LGA_draw(LGA_Config* configuration, float* devPtr)
