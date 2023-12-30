@@ -32,5 +32,26 @@ void copyDomainFromDevice(LGA_Config* config)
 	cudaMemcpy(config->domain_Host, config->domain_Device, sizeof(Field) * config->nx * config->ny, cudaMemcpyDeviceToHost);
 }
 
+void printLGAConfig(const LGA_Config* config) {
+    printf("LGA_Config Data:\n");
+    printf("nx: %u\n", config->nx);
+    printf("ny: %u\n", config->ny);
+    printf("dx: %lf\n", config->dx);
+    printf("dt: %lf\n", config->dt);
+    printf("defaultRo: %lf\n", config->defaultRo);
+    printf("fluidRo: %lf\n", config->fluidRo);
+    printf("dynamicViscosity: %lf\n", config->dynamicViscousity);
+    printf("relaxationTime: %lf\n", config->relaxationTime);
+    printf("cs: %lf\n", config->cs);
+}
 
+void calcRelaxationTime(LGA_Config* config)
+{
+	config->relaxationTime = config->dynamicViscousity / (config->fluidRo * config->cs * config->cs * config->dt) + 0.5;
+}
+
+void calcLatticeSoundSpeed(LGA_Config* config)
+{
+	config->cs = config->dx / (config->dt * sqrt(3));
+}
 

@@ -28,15 +28,6 @@ int shutDown(LGA_Config* configuration)
 	return result;
 }
 
-void calcRelaxationTime(LGA_Config* config)
-{
-	config->relaxationTime = config->dynamicViscousity / (config->fluidRo * config->cs * config->cs * config->dt) + 0.5;
-}
-
-void calcLatticeSoundSpeed(LGA_Config* config)
-{
-	config->cs = config->dx / (config->dt * sqrt(3));
-}
 
 
 DWORD WINAPI RunSimulationParallel(LPVOID configuration)
@@ -91,7 +82,7 @@ int createEmptySpace(LGA_Config* config, unsigned int nx, unsigned int ny)
 		for (unsigned int x = 0; x < nx; x++)
 		{
 			config->domain_Host[x + y * nx].type = EMPTY_SPACE;
-			config->domain_Host[x + y * nx].ro = 0.08;
+			config->domain_Host[x + y * nx].ro = config->defaultRo;
 			config->domain_Host[x + y * nx].u[0] = 0;
 			config->domain_Host[x + y * nx].u[1] = 0;
 			for (int i = 0; i < 9; i++)
@@ -120,6 +111,35 @@ void drawWall(LGA_Config* config, unsigned int x0, unsigned int width, unsigned 
 	}
 }
 
+void keyEvents(GLFWwindow* window, LGA_Config* configuration)
+{
+	if (glfwGetKey(window, '1') == GLFW_PRESS) {
+		//EnterCriticalSection(&accessSimulationState);
+		configuration->visualisation.field = 0;
+		//LeaveCriticalSection(&accessSimulationState);
+	}
+	if (glfwGetKey(window, '2') == GLFW_PRESS) {
+		//EnterCriticalSection(&accessSimulationState);
+		configuration->visualisation.field = 1;
+		//LeaveCriticalSection(&accessSimulationState);
+	}
+	if (glfwGetKey(window, '3') == GLFW_PRESS) {
+		//EnterCriticalSection(&accessSimulationState);
+		configuration->visualisation.field = 2;
+		//LeaveCriticalSection(&accessSimulationState);
+	}
+	if (glfwGetKey(window, '4') == GLFW_PRESS) {
+		//EnterCriticalSection(&accessSimulationState);
+		configuration->visualisation.field = 3;
+		//LeaveCriticalSection(&accessSimulationState);
+	}
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		configuration->visualisation.amplifier += configuration->visualisation.amplifierStep;
+	}
+	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+		configuration->visualisation.amplifier -= configuration->visualisation.amplifierStep;
+	}
+}
 
 void LGA_simulation(LGA_Config* configuration)
 {
@@ -178,7 +198,7 @@ void LGA_simulation(LGA_Config* configuration)
 	while (!glfwWindowShouldClose(window)) {
 		// Process input
 		glfwPollEvents();
-		//Sleep(1000);
+		keyEvents(window, configuration);
 		if(isStillWorking(configuration) == 0)
 		{
 			// Update VBO //

@@ -7,7 +7,7 @@
 #define C_2 3.8177
 #define C_3 1.3816
 
-#define FIELD 0
+#define FIELD 1
 
 //__constant__ int64_t states = 0b1111110111101100011110100110010010111001010110000011000100100000;
 
@@ -108,7 +108,7 @@ void LGA_run(LGA_Config* configuration)
 	cudaDeviceSynchronize();
 }
 
-__global__ void LGA_K_Draw(Field* domain_D, float* vbo)
+__global__ void LGA_K_Draw(Field* domain_D, float* vbo, Visualisation* visualisation_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
 		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
@@ -119,17 +119,106 @@ __global__ void LGA_K_Draw(Field* domain_D, float* vbo)
 		vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
 		return;
 	}
-	double u = sqrt(domain_D[idx].u[0] * domain_D[idx].u[0] + domain_D[idx].u[1] * domain_D[idx].u[1]);
-	double param = (FIELD == 0) ? domain_D[idx].ro : u;
+	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = visualisation_D->amplifier * domain_D[idx].ro; 
+	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * domain_D[idx].ro;
+	vbo[idx * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * domain_D[idx].ro;
+}
 
-	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = domain_D[idx].ro; //(param < 0.3) * (param + 0.3);
-	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = domain_D[idx].ro; // (param >= 0.3 && param < 0.6)* (param + 0.3);//(domain_D[idx].ro)*  MAX_INTENSITY;
-	vbo[idx * VERTEX_SIZE + DIMENSION] = domain_D[idx].ro; 
+__global__ void LGA_K_Draw_Density(Field* domain_D, float* vbo, Visualisation* visualisation_D)
+{
+	int idx = threadIdx.x + blockDim.x * blockIdx.x +
+		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+
+	if (domain_D[idx].type == WALL) {
+		vbo[idx * VERTEX_SIZE + DIMENSION] = 0;
+		vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
+		vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
+		return;
+	}
+
+	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = visualisation_D->amplifier * domain_D[idx].ro;
+	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * domain_D[idx].ro;
+	vbo[idx * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * domain_D[idx].ro;
+}
+
+__global__ void LGA_K_Draw_Velocity_Norm(Field* domain_D, float* vbo, Visualisation* visualisation_D)
+{
+	int idx = threadIdx.x + blockDim.x * blockIdx.x +
+		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+
+	if (domain_D[idx].type == WALL) {
+		vbo[idx * VERTEX_SIZE + DIMENSION] = 0;
+		vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
+		vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
+		return;
+	}
+	float velocity = sqrt(domain_D[idx].u[0] * domain_D[idx].u[0] + (domain_D[idx].u[1] * domain_D[idx].u[1]));
+
+	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = visualisation_D->amplifier * velocity;
+	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * velocity;
+	vbo[idx * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * velocity;
+}
+
+__global__ void LGA_K_Draw_Velocity_Horizontal(Field* domain_D, float* vbo, Visualisation* visualisation_D)
+{
+	int idx = threadIdx.x + blockDim.x * blockIdx.x +
+		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+
+	if (domain_D[idx].type == WALL) {
+		vbo[idx * VERTEX_SIZE + DIMENSION] = 0;
+		vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
+		vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
+		return;
+	}
+	
+	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0;
+	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * abs(domain_D[idx].u[0]) * (domain_D[idx].u[0] > 0);
+	vbo[idx * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * abs(domain_D[idx].u[0]) * (domain_D[idx].u[0] < 0);
+}
+
+__global__ void LGA_K_Draw_Velocity_Vertical(Field* domain_D, float* vbo, Visualisation* visualisation_D)
+{
+	int idx = threadIdx.x + blockDim.x * blockIdx.x +
+		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+
+	if (domain_D[idx].type == WALL) {
+		vbo[idx * VERTEX_SIZE + DIMENSION] = 0;
+		vbo[idx * VERTEX_SIZE + DIMENSION + 1] = 0;
+		vbo[idx * VERTEX_SIZE + DIMENSION + 2] = MAX_INTENSITY;
+		return;
+	}
+
+	vbo[idx * VERTEX_SIZE + DIMENSION + 2] = 0;
+	vbo[idx * VERTEX_SIZE + DIMENSION + 1] = visualisation_D->amplifier * abs(domain_D[idx].u[1]) * (domain_D[idx].u[1] > 0);
+	vbo[idx * VERTEX_SIZE + DIMENSION] = visualisation_D->amplifier * abs(domain_D[idx].u[1])* (domain_D[idx].u[1] < 0);
 }
 
 void LGA_draw(LGA_Config* configuration, float* devPtr)
 {
-	LGA_K_Draw <<< configuration->gridSize, configuration->blockSize >>> (configuration->domain_Device, devPtr);
+	cudaMemcpy(configuration->visualisation_Device, &configuration->visualisation, sizeof(Visualisation), cudaMemcpyHostToDevice);
+	switch (configuration->visualisation.field)
+	{
+	case 0:
+		LGA_K_Draw_Density << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device, devPtr, 
+			configuration->visualisation_Device);
+		break;
+	case 1:
+		LGA_K_Draw_Velocity_Norm << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device, devPtr,
+			configuration->visualisation_Device);
+		break;
+	case 2:
+		LGA_K_Draw_Velocity_Horizontal << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device, devPtr,
+			configuration->visualisation_Device);
+		break;
+	case 3:
+		LGA_K_Draw_Velocity_Vertical << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device, devPtr,
+			configuration->visualisation_Device);
+		break;
+	default:
+		LGA_K_Draw << < configuration->gridSize, configuration->blockSize >> > (configuration->domain_Device, devPtr,
+			configuration->visualisation_Device);
+		break;
+	}
 	cudaDeviceSynchronize();
 }
 
@@ -137,7 +226,7 @@ void setConstantMemory(LGA_Config* config)
 {
 	cudaMemcpyToSymbol("NX_global", &config->nx, sizeof(unsigned int));
 	cudaMemcpyToSymbol("NY_global", &config->ny, sizeof(unsigned int));
-	float time_coef = config->simulationData.dt / config->simulationData.tau;
+	float time_coef = 1 / config->relaxationTime;
 	cudaMemcpyToSymbol("Time_coef", &time_coef, sizeof(float), 0, cudaMemcpyHostToDevice);
 	float c1 = 1 / (config->cs * config->cs);
 	float c3 = c1 * 0.5;

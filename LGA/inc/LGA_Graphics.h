@@ -21,4 +21,5 @@ void mapCudaResources(Graphics_Objects* gobjs);
 void unmapCudaGraphicResources(Graphics_Objects* objs);
 void releaseOpenGLResources(Graphics_Objects* objs);
 
+
 float* generateDomainRepresentation(LGA_Config* config);

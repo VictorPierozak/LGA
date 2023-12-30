@@ -12,6 +12,13 @@ typedef struct
 
 typedef struct
 {
+	int field;
+	float amplifier;
+	float amplifierStep;
+}Visualisation;
+
+typedef struct
+{
 	Field* domain_Host;
 	Field* domain_Device;
 	unsigned int nx;
@@ -31,8 +38,14 @@ typedef struct
 	dim3 gridSize;
 
 	// Simulation //
-	Simulation_Data simulationData;
 
+	double defaultRo;
+	double v0[2];
+
+	Visualisation visualisation;
+	Visualisation* visualisation_Device;
+
+	int field;
 	int isWorking;
 	int shutDown;
 } LGA_Config;
@@ -41,3 +54,6 @@ void calculateBlockSize(LGA_Config* config);
 void pushDomainToDevice(LGA_Config* config);
 void pullDomainFromDevice(LGA_Config* config);
 void copyDomainFromDevice(LGA_Config* config);
+void printLGAConfig(const LGA_Config* config);
+void calcRelaxationTime(LGA_Config* config);
+void calcLatticeSoundSpeed(LGA_Config* config);

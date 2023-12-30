@@ -13,5 +13,3 @@ void drawWall(LGA_Config* config, unsigned int x0, unsigned int width, unsigned 
 void randomInitialState(LGA_Config* config, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height);
 
 
-void calcRelaxationTime(LGA_Config* config);
-void calcLatticeSoundSpeed(LGA_Config* config);
