@@ -48,12 +48,13 @@ typedef struct
 	int field;
 	int isWorking;
 	int shutDown;
-} LGA_Config;
+	int doCopy; // 0 - no copy | 1 - do copy | 2 - done
+} LBM_Config;
 
-void calculateBlockSize(LGA_Config* config);
-void pushDomainToDevice(LGA_Config* config);
-void pullDomainFromDevice(LGA_Config* config);
-void copyDomainFromDevice(LGA_Config* config);
-void printLGAConfig(const LGA_Config* config);
-void calcRelaxationTime(LGA_Config* config);
-void calcLatticeSoundSpeed(LGA_Config* config);
+void calculateBlockSize(LBM_Config* config);
+void pushDomainToDevice(LBM_Config* config);
+void pullDomainFromDevice(LBM_Config* config);
+void copyDomainFromDevice(LBM_Config* config);
+void printLGAConfig(const LBM_Config* config);
+void calcRelaxationTime(LBM_Config* config);
+void calcLatticeSoundSpeed(LBM_Config* config);

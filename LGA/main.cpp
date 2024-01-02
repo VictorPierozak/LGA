@@ -6,19 +6,19 @@ int main()
 {
     srand(time(NULL));
    
-    LGA_Config* config = (LGA_Config*)malloc(sizeof(LGA_Config));
+    LBM_Config* config = (LBM_Config*)malloc(sizeof(LBM_Config));
     config->domain_Device = NULL;
     config->domain_Host = NULL;
     config->isWorking = 0;
     config->shutDown = 0;
-    config->nx = NX;
-    config->ny = NY;
+    config->nx = 128;
+    config->ny = 128;
 
-    config->dynamicViscousity = 1.81e-5;//0.0009;
-    config->fluidRo = 1.293;
-    config->dt = 0.1;
-    config->dx = 0.1;
-    config->defaultRo = 1e-6;
+    config->dynamicViscousity = 1.867e-5;
+    config->fluidRo = 1.286;
+    config->dx = 2.0 /(double) config->nx; 0.1;
+    config->dt = config->dx*0.4;
+    config->defaultRo = 0; 1e-6;
     config->field = 0;
 
     config->visualisation.field = 0;
@@ -29,10 +29,11 @@ int main()
 
     calcLatticeSoundSpeed(config);
     calcRelaxationTime(config);
-
+    //config->relaxationTime = 0.867;
+    //config->cs = 1.0 / sqrt(3);
     printLGAConfig(config);
 
-    createEmptySpace(config, NX, NY);
+    createEmptySpace(config, config->nx, config->ny);
     drawWall(config, 0, config->nx, 0, 1);
     drawWall(config, 0, 1, 0, config->ny);
     drawWall(config, config->nx - 1, 1, 0, config->ny);
@@ -47,7 +48,7 @@ int main()
 
     randomInitialState(config, 0, config->nx / 5 + 1, 0, config->ny);
    
-    LGA_simulation(config);
+    LBM_simulation(config);
     free(config->domain_Host);
     cudaFree(config->visualisation_Device);
     return 0;

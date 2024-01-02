@@ -3,8 +3,8 @@
 #include<stdio.h>
 #include<string.h>
 
-#define NX 128
-#define NY 128
+#define NX 256
+#define NY 256
 
 #define EMPTY_SPACE 0
 #define WALL 1
@@ -23,11 +23,11 @@
 typedef struct 
 {
 	int type;
-	float inStreams[9];
-	float eqStreams[9];
-	float outStreams[9];
-	float ro;
-	float u[2];
+	double inStreams[9];
+	double eqStreams[9];
+	double outStreams[9];
+	double ro;
+	double u[2];
 } Field;
 
 // Failures - information 

@@ -14,13 +14,13 @@ typedef struct
 	size_t vboSize;
 }  Graphics_Objects;
 
-void createVBO(Graphics_Objects* objs, LGA_Config* config);
+void createVBO(Graphics_Objects* objs, LBM_Config* config);
 void createVAO(Graphics_Objects* objs);
 void compileProgram(Graphics_Objects* objs, const char* vertexShader, const char* fragmentShader);
-Graphics_Objects* createGraphicsObjects(LGA_Config* config);
+Graphics_Objects* createGraphicsObjects(LBM_Config* config);
 void mapCudaResources(Graphics_Objects* gobjs);
 void unmapCudaGraphicResources(Graphics_Objects* objs);
 void releaseOpenGLResources(Graphics_Objects* objs);
 
 
-float* generateDomainRepresentation(LGA_Config* config);
+float* generateDomainRepresentation(LBM_Config* config);

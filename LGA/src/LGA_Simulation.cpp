@@ -4,13 +4,17 @@
 #include<stdio.h>
 #include<Windows.h>
 #include<ctime>
+#include<stdio.h>
+#include<omp.h>
 
 // CPU THREADS //
 
 CRITICAL_SECTION accessSimulationState;
 CRITICAL_SECTION accessShutDown;
+CRITICAL_SECTION accessCopy;
+CRITICAL_SECTION accessWritingCmd;
 
-int isStillWorking(LGA_Config* configuration)
+int isStillWorking(LBM_Config* configuration)
 {
 	int result = 0;
 	EnterCriticalSection(&accessSimulationState);
@@ -19,7 +23,7 @@ int isStillWorking(LGA_Config* configuration)
 	return result;
 }
 
-int shutDown(LGA_Config* configuration)
+int shutDown(LBM_Config* configuration)
 {
 	int result = 0;
 	EnterCriticalSection(&accessShutDown);
@@ -28,17 +32,35 @@ int shutDown(LGA_Config* configuration)
 	return result;
 }
 
-
+int doCopy(LBM_Config* configuration)
+{
+	int result = 0;
+	EnterCriticalSection(&accessCopy);
+	result = configuration->doCopy;
+	LeaveCriticalSection(&accessCopy);
+	return result;
+}
 
 DWORD WINAPI RunSimulationParallel(LPVOID configuration)
 {
 	printf("\nSimulation start\n");
-	LGA_Config* ptr = (LGA_Config*)configuration;
+	LBM_Config* ptr = (LBM_Config*)configuration;
 	//LGA_init(ptr);
 	while (shutDown(ptr) == 0)
 	{
-		while (isStillWorking(ptr) == 0) Sleep(1);
-		LGA_run(ptr);
+		while (isStillWorking(ptr) == 0)
+		{
+			if (doCopy(ptr) == 1)
+			{
+				copyDomainFromDevice(ptr);
+				EnterCriticalSection(&accessCopy);
+				ptr->doCopy = 2;
+				LeaveCriticalSection(&accessCopy);
+			}
+			else Sleep(1);
+		}
+
+		LBM_run(ptr);
 
 		EnterCriticalSection(&accessSimulationState);
 		ptr->isWorking = 0;
@@ -49,14 +71,37 @@ DWORD WINAPI RunSimulationParallel(LPVOID configuration)
 	return 0;
 }
 
+DWORD WINAPI calculateTotalMass(LPVOID ptr)
+{
+	LBM_Config* configuration = (LBM_Config*)ptr;
+	EnterCriticalSection(&accessCopy);
+	configuration->doCopy = 1;
+	LeaveCriticalSection(&accessCopy);
+
+	while (doCopy(configuration) != 2) Sleep(10);
+
+	EnterCriticalSection(&accessCopy);
+	configuration->doCopy = 0;
+	LeaveCriticalSection(&accessCopy);
+
+	double sum = 0;
+	size_t size = configuration->nx * configuration->ny;
+#pragma omp parallel for reduction(+:sum) default(none) firstprivate(size) num_threads(8)
+	for (size_t i = 0; i < size; i++)
+		sum += configuration->domain_Host[i].ro;
+	printf("=== TOTAL MASS: %lf ===\n", sum);
+	return 0;
+}
+
+
 //
 
-LGA_Config* LGA_setup(const char* setupFile)
+LBM_Config* LGA_setup(const char* setupFile)
 {
 	return NULL;
 }
 
-int createEmptySpace(LGA_Config* config, unsigned int nx, unsigned int ny)
+int createEmptySpace(LBM_Config* config, unsigned int nx, unsigned int ny)
 {
 	if (config == NULL)
 	{
@@ -98,7 +143,7 @@ int createEmptySpace(LGA_Config* config, unsigned int nx, unsigned int ny)
 }
 
 
-void drawWall(LGA_Config* config, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height)
+void drawWall(LBM_Config* config, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height)
 {
 	unsigned int yend = y0 + height;
 	unsigned int xend = x0 + width;
@@ -111,7 +156,7 @@ void drawWall(LGA_Config* config, unsigned int x0, unsigned int width, unsigned 
 	}
 }
 
-void keyEvents(GLFWwindow* window, LGA_Config* configuration)
+void keyEvents(GLFWwindow* window, LBM_Config* configuration)
 {
 	if (glfwGetKey(window, '1') == GLFW_PRESS) {
 		//EnterCriticalSection(&accessSimulationState);
@@ -133,15 +178,28 @@ void keyEvents(GLFWwindow* window, LGA_Config* configuration)
 		configuration->visualisation.field = 3;
 		//LeaveCriticalSection(&accessSimulationState);
 	}
+	if (glfwGetKey(window, 'M') == GLFW_PRESS) {
+		HANDLE totalMass = NULL;
+		DWORD pid_simulation;
+
+		// Thread creation //
+		totalMass = CreateThread(NULL, 0, calculateTotalMass, configuration, 0, &pid_simulation);
+		// Detach //
+		CloseHandle(totalMass);
+	}
 	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+		printf("=== AMPLIFIER ===\n Previouse: %f\t|\t", configuration->visualisation.amplifier);
 		configuration->visualisation.amplifier += configuration->visualisation.amplifierStep;
+		printf("New: %f\n", configuration->visualisation.amplifier);
 	}
 	if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+		printf("=== AMPLIFIER ===\n Previouse: %f\t|\t", configuration->visualisation.amplifier);
 		configuration->visualisation.amplifier -= configuration->visualisation.amplifierStep;
+		printf("New: %f\n", configuration->visualisation.amplifier);
 	}
 }
 
-void LGA_simulation(LGA_Config* configuration)
+void LBM_simulation(LBM_Config* configuration)
 {
 	// Set GLFW error callback
 	// Configure GLFW
@@ -188,6 +246,7 @@ void LGA_simulation(LGA_Config* configuration)
 	DWORD pid_simulation;
 	InitializeCriticalSection(&accessSimulationState);
 	InitializeCriticalSection(&accessShutDown);
+	InitializeCriticalSection(&accessCopy);
 
 	// Thread creation //
 	simulation = CreateThread(NULL, 0, RunSimulationParallel, configuration, 0, &pid_simulation);
@@ -203,7 +262,7 @@ void LGA_simulation(LGA_Config* configuration)
 		{
 			// Update VBO //
 			mapCudaResources(graphicsRes);
-			LGA_draw(configuration, graphicsRes->devPtr);
+			LBM_draw(configuration, graphicsRes->devPtr);
 			unmapCudaGraphicResources(graphicsRes);
 			// Start new work //
 			EnterCriticalSection(&accessSimulationState);
@@ -238,7 +297,7 @@ void LGA_simulation(LGA_Config* configuration)
 	free(graphicsRes);
 }
 
-void randomInitialState(LGA_Config* config, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height)
+void randomInitialState(LBM_Config* config, unsigned int x0, unsigned int width, unsigned int y0, unsigned int height)
 {
 	unsigned int counter = 0;
 	unsigned int size = config->nx * config->ny;

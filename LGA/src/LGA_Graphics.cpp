@@ -29,7 +29,7 @@ const char* readFile(const char* filename) {
     return buffer; // Return the content as const char*
 }
 
-void createVBO(Graphics_Objects* objs, LGA_Config* config)
+void createVBO(Graphics_Objects* objs, LBM_Config* config)
 {
 	glGenBuffers(1, &objs->vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, objs->vbo);
@@ -49,7 +49,7 @@ void createVAO(Graphics_Objects* objs)
 	glVertexAttribPointer(COLOR_LOCATION, COLOR_ATTRIB, GL_FLOAT, GL_FALSE, VERTEX_SIZE * sizeof(GLfloat), (void*)(DIMENSION * sizeof(GLfloat)));
 }
 
-void createEBO(Graphics_Objects* objs, LGA_Config* config)
+void createEBO(Graphics_Objects* objs, LBM_Config* config)
 {
     unsigned int* ebo = (unsigned int*)malloc(sizeof(float) * config->nx * config->ny * 6);
 
@@ -141,7 +141,7 @@ void compileProgram(Graphics_Objects* objs, const char* vertexShader, const char
 
 }
 
-Graphics_Objects* createGraphicsObjects(LGA_Config* config)
+Graphics_Objects* createGraphicsObjects(LBM_Config* config)
 {
     glewExperimental = GL_TRUE;
     glewInit();
@@ -182,7 +182,7 @@ void releaseOpenGLResources(Graphics_Objects* objs)
     glDeleteVertexArrays(1, &objs->vao);
 }
 
-float* generateDomainRepresentation(LGA_Config* config)
+float* generateDomainRepresentation(LBM_Config* config)
 {
     float* vbo = (float*)malloc(sizeof(float) * VERTEX_SIZE * config->nx * config->ny * 4);
 
