@@ -50,6 +50,8 @@ typedef struct
 
 	// Simulation //
 
+	int flow;
+
 	double defaultRo;
 	double v0[2];
 

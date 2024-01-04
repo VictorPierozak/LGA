@@ -5,6 +5,8 @@
 
 __global__ void LBM_K_Collsion(Field* domain_D);
 __global__ void LBM_K_Streaming(Field* domain_D);
+__global__ void LBM_K_Variables(Field* domain_D);
+
 __global__ void LBM_K_Draw(Field* domain_D, float* vbo, Visualisation* visualisation_D);
 __global__ void LBM_K_Draw_Density(Field* domain_D, float* vbo, Visualisation* visualisation_D);
 __global__ void LBM_K_Draw_Velocity_Norm(Field* domain_D, float* vbo, Visualisation* visualisation_D);
