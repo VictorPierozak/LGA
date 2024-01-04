@@ -52,7 +52,7 @@ int main()
   //  drawWall(config, config->nx / 2, 1, 4*config->ny / 5, config->ny/5);
 
 
-    //randomInitialState(config, config->nx/5, config->nx / 5, config->ny/3, config->ny/3);
+    randomInitialState(config, config->nx/5, config->nx / 5, config->ny/3, config->ny/3);
     //randomInitialState(config, 0, config->nx / 5 + 1, 1, config->ny-1);
    
     LBM_simulation(config);
