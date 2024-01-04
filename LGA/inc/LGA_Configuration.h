@@ -33,8 +33,20 @@ typedef struct
 
 	// CUDA related variables //
 
-	dim3 blockSize;
-	dim3 gridSize;
+	dim3 blockSize_Streaming;
+	dim3 gridSize_Streaming;
+
+	dim3 blockSize_Collsion;
+	dim3 gridSize_Collsion;
+
+	int blockSize_BoundryN;
+	int gridSize_BoundryN;
+	int blockSize_BoundryS;
+	int gridSize_BoundryS;
+	int blockSize_BoundryE;
+	int gridSize_BoundryE;
+	int blockSize_BoundryW;
+	int gridSize_BoundryW;
 
 	// Simulation //
 

@@ -5,12 +5,31 @@
 
 void calculateBlockSize(LBM_Config* config)
 {
-	config->blockSize.x = 32;
-	config->blockSize.y = 32;
-	config->blockSize.z = 1;
-	dim3 grid = { (config->nx + config->blockSize.x - 1) / config->blockSize.x,
-			(config->ny + config->blockSize.y - 1) / config->blockSize.y, 1 };
-	config->gridSize = grid;
+	config->blockSize_Collsion.x = 32;
+	config->blockSize_Collsion.y = 32;
+	config->blockSize_Collsion.z = 1;
+	dim3 grid = { (config->nx + config->blockSize_Collsion.x - 1) / config->blockSize_Collsion.x,
+			(config->ny + config->blockSize_Collsion.y - 1) / config->blockSize_Collsion.y, 1 };
+	config->gridSize_Collsion = grid;
+
+	config->blockSize_Streaming.x = 32;
+	config->blockSize_Streaming.y = 32;
+	config->blockSize_Streaming.z = 1;
+	grid = { (config->nx - 2 + config->blockSize_Streaming.x - 1) / config->blockSize_Streaming.x,
+			(config->ny - 2 + config->blockSize_Streaming.y - 1) / config->blockSize_Streaming.y, 1 };
+	config->gridSize_Streaming = grid;
+
+	config->blockSize_BoundryE = 32;
+	config->gridSize_BoundryE = (config->ny - 2 + config->blockSize_BoundryE - 1)/ config->blockSize_BoundryE;
+
+	config->blockSize_BoundryW = 32;
+	config->gridSize_BoundryW = (config->ny - 2 + config->blockSize_BoundryW - 1)/ config->blockSize_BoundryW;
+
+	config->blockSize_BoundryN = 32;
+	config->gridSize_BoundryN = (config->nx - 2 + config->blockSize_BoundryN - 1)/ config->blockSize_BoundryN;
+
+	config->blockSize_BoundryS = 32;
+	config->gridSize_BoundryS = (config->nx - 2 + config->blockSize_BoundryS - 1)/ config->blockSize_BoundryS;
 }
 
 void pushDomainToDevice(LBM_Config* config)

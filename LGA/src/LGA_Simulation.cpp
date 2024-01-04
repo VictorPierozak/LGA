@@ -252,7 +252,7 @@ void LBM_simulation(LBM_Config* configuration)
 	simulation = CreateThread(NULL, 0, RunSimulationParallel, configuration, 0, &pid_simulation);
 	// Detach //
 	CloseHandle(simulation);
-	Sleep(10000);
+	//Sleep(10000);
 	// Main loop
 	while (!glfwWindowShouldClose(window)) {
 		// Process input
