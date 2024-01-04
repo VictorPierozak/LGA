@@ -18,6 +18,12 @@ __constant__ double COEF_1;
 __constant__ double COEF_2;
 __constant__ double COEF_3;
 
+__constant__ double friction;
+
+__constant__ int BOUNDRY_N;
+__constant__ int BOUNDRY_S;
+__constant__ int BOUNDRY_W;
+__constant__ int BOUNDRY_E;
 
 __global__ void LBM_K_Streaming(Field* domain_D)
 {
@@ -101,22 +107,129 @@ __global__ void LBM_K_Collsion(Field* domain_D)
 __global__ void LBM_K_Boundry_N(Field* domain_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x;
+	domain_D[idx].inStreams[3] = domain_D[idx + NX_global].outStreams[3];
+	domain_D[idx].inStreams[1] = domain_D[idx-1].outStreams[1];
+	domain_D[idx].inStreams[2] = domain_D[idx+1].outStreams[2];
+	domain_D[idx].inStreams[5] = domain_D[idx + NX_global - 1].outStreams[5];
+	domain_D[idx].inStreams[6] = domain_D[idx + NX_global + 1].outStreams[6];
+	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
+
+	switch (BOUNDRY_N)
+	{
+	case 1: //bouncy
+		domain_D[idx].inStreams[4] = domain_D[idx].outStreams[3];
+		domain_D[idx].inStreams[7] = domain_D[idx].outStreams[5];
+		domain_D[idx].inStreams[8] = domain_D[idx].outStreams[6];
+		break;
+	case 2: //symmetry
+		domain_D[idx].inStreams[4] = domain_D[idx].outStreams[3];
+		domain_D[idx].inStreams[7] = domain_D[idx].outStreams[6];
+		domain_D[idx].inStreams[8] = domain_D[idx].outStreams[5];
+		break;
+	case 3: //wall
+		domain_D[idx].inStreams[4] = domain_D[idx].outStreams[3];
+		domain_D[idx].inStreams[7] = friction*domain_D[idx].inStreams[5] + (1.0-friction)* domain_D[idx].outStreams[6];
+		domain_D[idx].inStreams[8] = friction * domain_D[idx].inStreams[6] + (1.0 - friction) * domain_D[idx].outStreams[5];
+		break;
+	case 4: //constant normal velocity
+		//domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3] + 2.0 / 3.0 * domain_D[idx].ro * domain_D[idx].u[1];
+		break;
+	case 5:
+		break;
+	}
 
 }
 
 __global__ void LBM_K_Boundry_S(Field* domain_D)
 {
+	int idx = threadIdx.x + blockDim.x * blockIdx.x + NX_global*(NY_global-2);
+	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
+	domain_D[idx].inStreams[1] = domain_D[idx - 1].outStreams[1];
+	domain_D[idx].inStreams[2] = domain_D[idx + 1].outStreams[2];
+	domain_D[idx].inStreams[4] = domain_D[idx - NX_global].outStreams[4];
+	domain_D[idx].inStreams[7] = domain_D[idx - NX_global + 1].outStreams[7];
+	domain_D[idx].inStreams[8] = domain_D[idx - NX_global - 1].outStreams[8];
+
+	switch (BOUNDRY_S)
+	{
+	case 1:
+		domain_D[idx].inStreams[3] = domain_D[idx].outStreams[4];
+		domain_D[idx].inStreams[5] = domain_D[idx].outStreams[7];
+		domain_D[idx].inStreams[6] = domain_D[idx].outStreams[8];
+		break;
+	case 2:
+		domain_D[idx].inStreams[3] = domain_D[idx].outStreams[4];
+		domain_D[idx].inStreams[5] = domain_D[idx].outStreams[8];
+		domain_D[idx].inStreams[6] = domain_D[idx].outStreams[7];
+		break;
+	case 3:
+		domain_D[idx].inStreams[3] = domain_D[idx].inStreams[4];
+		domain_D[idx].inStreams[5] = friction * domain_D[idx].inStreams[7] + (1.0 - friction) * domain_D[idx].inStreams[8];
+		domain_D[idx].inStreams[6] = friction * domain_D[idx].inStreams[8] + (1.0 - friction) * domain_D[idx].inStreams[7];
+		break;
+	}
 
 }
 
 __global__ void LBM_K_Boundry_W(Field* domain_D)
 {
+	int idx = (threadIdx.x + blockDim.x * blockIdx.x + NX_global) * (NX_global) + NX_global - 1;
+	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
+	domain_D[idx].inStreams[1] = domain_D[idx - 1].outStreams[1];
+	domain_D[idx].inStreams[3] = domain_D[idx + NX_global].outStreams[3];
+	domain_D[idx].inStreams[4] = domain_D[idx - NX_global].outStreams[4];
+	domain_D[idx].inStreams[5] = domain_D[idx + NX_global - 1].outStreams[5];
+	domain_D[idx].inStreams[8] = domain_D[idx - NX_global - 1].outStreams[8];
+
+	switch (BOUNDRY_W)
+	{
+	case 1:
+		domain_D[idx].inStreams[2] = domain_D[idx].outStreams[1];
+		domain_D[idx].inStreams[6] = domain_D[idx].outStreams[8];
+		domain_D[idx].inStreams[7] = domain_D[idx].outStreams[5];
+		break;
+	case 2:
+		domain_D[idx].inStreams[2] = domain_D[idx].outStreams[1];
+		domain_D[idx].inStreams[7] = domain_D[idx].outStreams[8];
+		domain_D[idx].inStreams[6] = domain_D[idx].outStreams[5];
+		break;
+	case 3:
+		domain_D[idx].inStreams[2] = domain_D[idx].outStreams[1];
+		domain_D[idx].inStreams[6] = friction * domain_D[idx].outStreams[8] + (1.0 - friction) * domain_D[idx].outStreams[5];
+		domain_D[idx].inStreams[7] = friction * domain_D[idx].outStreams[5] + (1.0 - friction) * domain_D[idx].outStreams[8];
+		break;
+	}
 
 }
 
 __global__ void LBM_K_Boundry_E(Field* domain_D)
 {
+	int idx = (threadIdx.x + blockDim.x * blockIdx.x + NX_global) * (NX_global);
+	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
+	domain_D[idx].inStreams[2] = domain_D[idx + 1].outStreams[2];
+	domain_D[idx].inStreams[3] = domain_D[idx + NX_global].outStreams[3];
+	domain_D[idx].inStreams[4] = domain_D[idx - NX_global].outStreams[4];
+	domain_D[idx].inStreams[6] = domain_D[idx + NX_global + 1].outStreams[6];
+	domain_D[idx].inStreams[7] = domain_D[idx - NX_global + 1].outStreams[7];
 
+	switch (BOUNDRY_E)
+	{
+	case 1:
+		domain_D[idx].inStreams[1] = domain_D[idx].outStreams[2];
+		domain_D[idx].inStreams[5] = domain_D[idx].outStreams[7];
+		domain_D[idx].inStreams[8] = domain_D[idx].outStreams[6];
+		break;
+	case 2:
+		domain_D[idx].inStreams[1] = domain_D[idx].outStreams[2];
+		domain_D[idx].inStreams[8] = domain_D[idx].outStreams[7];
+		domain_D[idx].inStreams[5] = domain_D[idx].outStreams[6];
+		break;
+	case 3:
+		domain_D[idx].inStreams[1] = domain_D[idx].outStreams[2];
+		domain_D[idx].inStreams[5] = friction * domain_D[idx].outStreams[7] + (1.0 - friction) * domain_D[idx].outStreams[8];
+		domain_D[idx].inStreams[8] = friction * domain_D[idx].outStreams[6] + (1.0 - friction) * domain_D[idx].outStreams[7];
+		break;
+	}
 }
 
 
@@ -267,7 +380,7 @@ void setConstantMemory(LBM_Config* config)
 	cudaMemcpyToSymbol(NY_global, &config->ny, sizeof(unsigned int));
 	float time_coef = 1 / config->relaxationTime;
 	cudaMemcpyToSymbol(Time_coef, &time_coef, sizeof(float), 0, cudaMemcpyHostToDevice);
-	float c1 =  1 / (config->cs * config->cs);
+	float c1 =  1.0 / (config->cs * config->cs);
 	float c3 = c1 * 0.5;
 	float c2 = c3* c1;
 	cudaMemcpyToSymbol(COEF_1, &c1, sizeof(float), 0, cudaMemcpyHostToDevice);

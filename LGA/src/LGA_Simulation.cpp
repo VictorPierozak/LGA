@@ -85,9 +85,9 @@ DWORD WINAPI calculateTotalMass(LPVOID ptr)
 	LeaveCriticalSection(&accessCopy);
 
 	double sum = 0;
-	size_t size = configuration->nx * configuration->ny;
-#pragma omp parallel for reduction(+:sum) default(none) firstprivate(size) num_threads(8)
-	for (size_t i = 0; i < size; i++)
+	long int size = configuration->nx * configuration->ny;
+//#pragma omp parallel for reduction(+:sum) default(none) firstprivate(size) num_threads(8)
+	for (long int i = 0; i < size; i++)
 		sum += configuration->domain_Host[i].ro;
 	printf("=== TOTAL MASS: %lf ===\n", sum);
 	return 0;
@@ -252,7 +252,7 @@ void LBM_simulation(LBM_Config* configuration)
 	simulation = CreateThread(NULL, 0, RunSimulationParallel, configuration, 0, &pid_simulation);
 	// Detach //
 	CloseHandle(simulation);
-
+	Sleep(10000);
 	// Main loop
 	while (!glfwWindowShouldClose(window)) {
 		// Process input

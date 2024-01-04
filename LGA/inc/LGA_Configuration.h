@@ -6,16 +6,15 @@
 
 typedef struct
 {
-	float dt;
-	float tau;
-}Simulation_Data;
-
-typedef struct
-{
 	int field;
 	float amplifier;
 	float amplifierStep;
 }Visualisation;
+
+typedef struct
+{
+	int type;
+}BoundryCondition;
 
 typedef struct
 {
@@ -41,6 +40,11 @@ typedef struct
 
 	double defaultRo;
 	double v0[2];
+
+	BoundryCondition boundryN;
+	BoundryCondition boundryS;
+	BoundryCondition boundryW;
+	BoundryCondition boundryE;
 
 	Visualisation visualisation;
 	Visualisation* visualisation_Device;

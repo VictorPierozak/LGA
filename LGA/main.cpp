@@ -11,14 +11,14 @@ int main()
     config->domain_Host = NULL;
     config->isWorking = 0;
     config->shutDown = 0;
-    config->nx = 128;
-    config->ny = 128;
+    config->nx = 256;
+    config->ny = 256;
 
     config->dynamicViscousity = 1.867e-5;
     config->fluidRo = 1.286;
-    config->dx = 2.0 /(double) config->nx; 0.1;
-    config->dt = config->dx*0.4;
-    config->defaultRo = 0; 1e-6;
+    config->dx = 1.0 /(double) config->nx; 0.1;
+    config->dt = config->dx;
+    config->defaultRo =  1e-12;
     config->field = 0;
 
     config->visualisation.field = 0;
@@ -46,6 +46,7 @@ int main()
   //  drawWall(config, config->nx / 2, 1, 4*config->ny / 5, config->ny/5);
 
 
+    randomInitialState(config, 0, config->nx / 5 + 1, 0, config->ny);
     randomInitialState(config, 0, config->nx / 5 + 1, 0, config->ny);
    
     LBM_simulation(config);
