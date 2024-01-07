@@ -10,8 +10,9 @@
 #define FIELD 1
 
 
-__constant__ unsigned int NX_global;
-__constant__ unsigned int NY_global;
+__constant__ unsigned int NX;
+__constant__ unsigned int NY;
+
 __constant__ double Time_coef = 1;
 __constant__ double COEF_1;
 __constant__ double COEF_2;
@@ -19,18 +20,18 @@ __constant__ double COEF_3;
 
 __constant__ double friction;
 
-__constant__ int BOUNDRY_N;
-__constant__ int BOUNDRY_S;
-__constant__ int BOUNDRY_W;
-__constant__ int BOUNDRY_E;
+__constant__ BoundryCondition BOUNDRY_N;
+__constant__ BoundryCondition BOUNDRY_S;
+__constant__ BoundryCondition BOUNDRY_W;
+__constant__ BoundryCondition BOUNDRY_E;
+
 
 __global__ void LBM_K_Streaming(Field* domain_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x + 1 +
-		NX_global * (threadIdx.y + blockDim.y * blockIdx.y + 1);
-	if (threadIdx.x + blockDim.x * blockIdx.x + 1 >= NX_global - 1) return;
-	if (idx >= NX_global*(NY_global-1)) return;
-	// ZA£O¯ENIE - MA£A LICZBA KOMÓREK GRANICZY ZE ŒCIANAMI //
+		NX * (threadIdx.y + blockDim.y * blockIdx.y + 1);
+	if (threadIdx.x + blockDim.x * blockIdx.x + 1 >= NX - 1) return;
+	if (idx >= NX*(NY-1)) return;
 
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
 
@@ -38,25 +39,25 @@ __global__ void LBM_K_Streaming(Field* domain_D)
 
 	domain_D[idx].inStreams[2] = domain_D[idx + 1].outStreams[2];
 
-	domain_D[idx].inStreams[3] = domain_D[idx + NX_global].outStreams[3];
+	domain_D[idx].inStreams[3] = domain_D[idx - NX].outStreams[3];
 
-	domain_D[idx].inStreams[4] = domain_D[idx - NX_global].outStreams[4];
+	domain_D[idx].inStreams[4] = domain_D[idx + NX].outStreams[4];
 
-	domain_D[idx].inStreams[5] = domain_D[idx + NX_global - 1].outStreams[5];
+	domain_D[idx].inStreams[5] = domain_D[idx - NX - 1].outStreams[5];
 
-	domain_D[idx].inStreams[6] = domain_D[idx + NX_global + 1].outStreams[6];
+	domain_D[idx].inStreams[6] = domain_D[idx - NX + 1].outStreams[6];
 
-	domain_D[idx].inStreams[7] = domain_D[idx - NX_global + 1].outStreams[7];
+	domain_D[idx].inStreams[7] = domain_D[idx + NX + 1].outStreams[7];
 
-	domain_D[idx].inStreams[8] = domain_D[idx - NX_global - 1].outStreams[8];
+	domain_D[idx].inStreams[8] = domain_D[idx + NX - 1].outStreams[8];
 
 }
 
 __global__ void LBM_K_Collsion(Field* domain_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
-		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
-	if (idx >= NX_global * NY_global - 1) return;
+		NX * (threadIdx.y + blockDim.y * blockIdx.y);
+	if (idx > NX * NY - 1) return;
 	for (int i = 0; i < 9; i += 3)
 	{
 		domain_D[idx].outStreams[i] = domain_D[idx].inStreams[i] + Time_coef * (
@@ -73,7 +74,7 @@ __global__ void LBM_K_Collsion(Field* domain_D)
 
 __global__ void LBM_K_Variables(Field* domain_D)
 {
-	int idx = threadIdx.x + blockDim.x * blockIdx.x + NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+	int idx = threadIdx.x + blockDim.x * blockIdx.x + NX * (threadIdx.y + blockDim.y * blockIdx.y);
 	domain_D[idx].ro = 0;
 
 	for (int i = 0; i < 9; i += 3)
@@ -95,30 +96,40 @@ __global__ void LBM_K_Variables(Field* domain_D)
 __global__ void LBM_K_Boundry_S(Field* domain_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x + 1;
-	if (idx >= NX_global- 1) return;
-	domain_D[idx].inStreams[4] = domain_D[idx + NX_global].outStreams[4];
+	if (idx >= NX- 1) return;
+	domain_D[idx].inStreams[4] = domain_D[idx + NX].outStreams[4];
 	domain_D[idx].inStreams[1] = domain_D[idx-1].outStreams[1];
 	domain_D[idx].inStreams[2] = domain_D[idx+1].outStreams[2];
-	domain_D[idx].inStreams[8] = domain_D[idx + NX_global - 1].outStreams[8];
-	domain_D[idx].inStreams[7] = domain_D[idx + NX_global + 1].outStreams[7];
+	domain_D[idx].inStreams[8] = domain_D[idx + NX - 1].outStreams[8];
+	domain_D[idx].inStreams[7] = domain_D[idx + NX + 1].outStreams[7];
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
 
-	switch (BOUNDRY_S)
+	switch (BOUNDRY_S.type)
 	{
-	case 1: //bouncy
-		domain_D[idx].inStreams[3] = domain_D[idx].outStreams[4];
-		domain_D[idx].inStreams[5] = domain_D[idx].outStreams[7];
-		domain_D[idx].inStreams[6] = domain_D[idx].outStreams[8];
+	case BOUNCY_BACK: //bouncy
+		domain_D[idx].inStreams[3] = domain_D[idx].inStreams[4];
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7];
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8];
 		break;
-	case 2:
-		domain_D[idx].inStreams[3] = domain_D[idx].outStreams[4];
-		domain_D[idx].inStreams[5] = domain_D[idx].outStreams[8];
-		domain_D[idx].inStreams[6] = domain_D[idx].outStreams[7];
+	case SYMMETRY:
+		domain_D[idx].inStreams[3] = domain_D[idx].inStreams[4];
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[8];
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[7];
 		break;
-	case 3:
+	case WALL_FRICTION:
 		domain_D[idx].inStreams[3] = domain_D[idx].inStreams[4];
 		domain_D[idx].inStreams[5] = friction * domain_D[idx].inStreams[7] + (1.0 - friction) * domain_D[idx].inStreams[8];
 		domain_D[idx].inStreams[6] = friction * domain_D[idx].inStreams[8] + (1.0 - friction) * domain_D[idx].inStreams[7];
+		break;
+	case CONSTANT_NORMAL_SPEED:
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[1] + domain_D[idx].inStreams[2] +
+			 domain_D[idx].inStreams[7] + domain_D[idx].inStreams[8]) / (1.0 - BOUNDRY_S.normalVelocity);
+		domain_D[idx].u[1] = BOUNDRY_S.normalVelocity;
+		domain_D[idx].u[0] = 6.0 / domain_D[idx].ro * (domain_D[idx].inStreams[1] + domain_D[idx].inStreams[2] + domain_D[idx].inStreams[7] +
+			domain_D[idx].inStreams[8])/(5.0 - 3.0*BOUNDRY_S.normalVelocity);
+		domain_D[idx].inStreams[3] = domain_D[idx].inStreams[4] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_S.normalVelocity;
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_S.normalVelocity;
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8] + 2.0 / 3.0 * domain_D[idx].ro + BOUNDRY_S.normalVelocity;
 		break;
 	}
 	
@@ -126,35 +137,44 @@ __global__ void LBM_K_Boundry_S(Field* domain_D)
 
 __global__ void LBM_K_Boundry_N(Field* domain_D)
 {
-	int idx = threadIdx.x + blockDim.x * blockIdx.x + 1 + NX_global * (NY_global - 1);
-	if (idx >= NX_global * NY_global - 1) return;
+	int idx = threadIdx.x + blockDim.x * blockIdx.x + 1 + NX * (NY - 1);
+	if (idx >= NX * NY - 1) return;
 
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
 	domain_D[idx].inStreams[1] = domain_D[idx - 1].outStreams[1];
 	domain_D[idx].inStreams[2] = domain_D[idx + 1].outStreams[2];
-	domain_D[idx].inStreams[3] = domain_D[idx - NX_global].outStreams[3];
-	domain_D[idx].inStreams[6] = domain_D[idx - NX_global + 1].outStreams[6];
-	domain_D[idx].inStreams[5] = domain_D[idx - NX_global - 1].outStreams[5];
+	domain_D[idx].inStreams[3] = domain_D[idx - NX].outStreams[3];
+	domain_D[idx].inStreams[6] = domain_D[idx - NX + 1].outStreams[6];
+	domain_D[idx].inStreams[5] = domain_D[idx - NX - 1].outStreams[5];
 
-	switch (BOUNDRY_N)
+	switch (BOUNDRY_N.type)
 	{
-	case 1:
-		domain_D[idx].inStreams[4] = domain_D[idx].outStreams[3];
-		domain_D[idx].inStreams[7] = domain_D[idx].outStreams[5];
-		domain_D[idx].inStreams[8] = domain_D[idx].outStreams[6];
+	case BOUNCY_BACK:
+		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3];
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5];
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6];
 		break;
-	case 2: //symmetry
-		domain_D[idx].inStreams[4] = domain_D[idx].outStreams[3];
-		domain_D[idx].inStreams[7] = domain_D[idx].outStreams[6];
-		domain_D[idx].inStreams[8] = domain_D[idx].outStreams[5];
+	case SYMMETRY:
+		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3];
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[6];
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[5];
 		break;
-	case 3: //wall
-		domain_D[idx].inStreams[4] = domain_D[idx].outStreams[3];
-		domain_D[idx].inStreams[7] = friction * domain_D[idx].outStreams[5] + (1.0 - friction) * domain_D[idx].outStreams[6];
-		domain_D[idx].inStreams[8] = friction * domain_D[idx].outStreams[6] + (1.0 - friction) * domain_D[idx].outStreams[5];
+	case WALL_FRICTION:
+		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3];
+		domain_D[idx].inStreams[7] = friction * domain_D[idx].inStreams[5] + (1.0 - friction) * domain_D[idx].inStreams[6];
+		domain_D[idx].inStreams[8] = friction * domain_D[idx].inStreams[6] + (1.0 - friction) * domain_D[idx].inStreams[5];
 		break;
-	case 4: //constant normal velocity
-		//domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3] + 2.0 / 3.0 * domain_D[idx].ro * domain_D[idx].u[1];
+	case CONSTANT_NORMAL_SPEED: 
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[1] + domain_D[idx].inStreams[2] +
+			domain_D[idx].inStreams[5] + domain_D[idx].inStreams[6]) / (1.0 - BOUNDRY_N.normalVelocity);
+		domain_D[idx].u[1] = BOUNDRY_N.normalVelocity;
+		domain_D[idx].u[0] = 6.0 / domain_D[idx].ro * (domain_D[idx].inStreams[1] + domain_D[idx].inStreams[2] + domain_D[idx].inStreams[5] +
+			domain_D[idx].inStreams[6]) / (5.0 - 3.0 * BOUNDRY_N.normalVelocity);
+		
+		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_N.normalVelocity;
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_N.normalVelocity;
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_N.normalVelocity;
+		
 		break;
 	case 5:
 		break;
@@ -167,30 +187,45 @@ __global__ void LBM_K_Boundry_N(Field* domain_D)
 
 __global__ void LBM_K_Boundry_E(Field* domain_D)
 {
-	int idx = (threadIdx.x + blockDim.x * blockIdx.x + 1) * (NX_global) + NX_global - 1;
+	if (threadIdx.x + blockDim.x * blockIdx.x + 1 >= NY) return;
+	int boundryIdx = threadIdx.x + blockDim.x * blockIdx.x + 1;
+	int idx = boundryIdx * (NX) + NX - 1;
+	
+
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
 	domain_D[idx].inStreams[1] = domain_D[idx - 1].outStreams[1];
-	domain_D[idx].inStreams[3] = domain_D[idx + NX_global].outStreams[3];
-	domain_D[idx].inStreams[4] = domain_D[idx - NX_global].outStreams[4];
-	domain_D[idx].inStreams[5] = domain_D[idx + NX_global - 1].outStreams[5];
-	domain_D[idx].inStreams[8] = domain_D[idx - NX_global - 1].outStreams[8];
+	domain_D[idx].inStreams[3] = domain_D[idx - NX].outStreams[3];
+	domain_D[idx].inStreams[4] = domain_D[idx + NX].outStreams[4];
+	domain_D[idx].inStreams[5] = domain_D[idx - NX - 1].outStreams[5];
+	domain_D[idx].inStreams[8] = domain_D[idx + NX - 1].outStreams[8];
 
-	switch (BOUNDRY_E)
+	switch (BOUNDRY_E.type)
 	{
-	case 1:
-		domain_D[idx].inStreams[2] = domain_D[idx].outStreams[1];
-		domain_D[idx].inStreams[6] = domain_D[idx].outStreams[8];
-		domain_D[idx].inStreams[7] = domain_D[idx].outStreams[5];
+	case BOUNCY_BACK:
+		domain_D[idx].inStreams[2] = domain_D[idx].inStreams[1];
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8];
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5];
 		break;
-	case 2:
-		domain_D[idx].inStreams[2] = domain_D[idx].outStreams[1];
-		domain_D[idx].inStreams[7] = domain_D[idx].outStreams[8];
-		domain_D[idx].inStreams[6] = domain_D[idx].outStreams[5];
+	case SYMMETRY:
+		domain_D[idx].inStreams[2] = domain_D[idx].inStreams[1];
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[8];
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[5];
 		break;
-	case 3:
-		domain_D[idx].inStreams[2] = domain_D[idx].outStreams[1];
-		domain_D[idx].inStreams[6] = friction * domain_D[idx].outStreams[8] + (1.0 - friction) * domain_D[idx].outStreams[5];
-		domain_D[idx].inStreams[7] = friction * domain_D[idx].outStreams[5] + (1.0 - friction) * domain_D[idx].outStreams[8];
+	case WALL_FRICTION:
+		domain_D[idx].inStreams[2] = domain_D[idx].inStreams[1];
+		domain_D[idx].inStreams[6] = friction * domain_D[idx].inStreams[8] + (1.0 - friction) * domain_D[idx].inStreams[5];
+		domain_D[idx].inStreams[7] = friction * domain_D[idx].inStreams[5] + (1.0 - friction) * domain_D[idx].inStreams[8];
+		break;
+	case CONSTANT_NORMAL_SPEED:
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] + domain_D[idx].inStreams[5] +
+			domain_D[idx].inStreams[8]) / (1.0 - BOUNDRY_E.normalVelocity);
+		domain_D[idx].u[0] = BOUNDRY_E.normalVelocity;
+		domain_D[idx].u[1] = 6.0 / domain_D[idx].ro * (domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] + domain_D[idx].inStreams[5] +
+			domain_D[idx].inStreams[8]) / (5.0 - 3.0 * BOUNDRY_E.normalVelocity);
+		domain_D[idx].inStreams[2] = domain_D[idx].inStreams[1] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_E.normalVelocity;
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_E.normalVelocity;
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_E.normalVelocity;
+
 		break;
 	}
 
@@ -198,30 +233,42 @@ __global__ void LBM_K_Boundry_E(Field* domain_D)
 
 __global__ void LBM_K_Boundry_W(Field* domain_D)
 {
-	int idx = (threadIdx.x + blockDim.x * blockIdx.x + 1) * (NX_global);
+	if (threadIdx.x + blockDim.x * blockIdx.x + 1 >= NY) return;
+	int idx = (threadIdx.x + blockDim.x * blockIdx.x + 1) * (NX);
+
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
 	domain_D[idx].inStreams[2] = domain_D[idx + 1].outStreams[2];
-	domain_D[idx].inStreams[3] = domain_D[idx + NX_global].outStreams[3];
-	domain_D[idx].inStreams[4] = domain_D[idx - NX_global].outStreams[4];
-	domain_D[idx].inStreams[6] = domain_D[idx + NX_global + 1].outStreams[6];
-	domain_D[idx].inStreams[7] = domain_D[idx - NX_global + 1].outStreams[7];
+	domain_D[idx].inStreams[3] = domain_D[idx - NX].outStreams[3];
+	domain_D[idx].inStreams[4] = domain_D[idx + NX].outStreams[4];
+	domain_D[idx].inStreams[6] = domain_D[idx - NX + 1].outStreams[6];
+	domain_D[idx].inStreams[7] = domain_D[idx + NX + 1].outStreams[7];
 
-	switch (BOUNDRY_W)
+	switch (BOUNDRY_W.type)
 	{
-	case 1:
-		domain_D[idx].inStreams[1] = domain_D[idx].outStreams[2];
-		domain_D[idx].inStreams[5] = domain_D[idx].outStreams[7];
-		domain_D[idx].inStreams[8] = domain_D[idx].outStreams[6];
+	case BOUNCY_BACK:
+		domain_D[idx].inStreams[1] = domain_D[idx].inStreams[2];
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7];
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6];
 		break;
-	case 2:
-		domain_D[idx].inStreams[1] = domain_D[idx].outStreams[2];
-		domain_D[idx].inStreams[8] = domain_D[idx].outStreams[7];
-		domain_D[idx].inStreams[5] = domain_D[idx].outStreams[6];
+	case SYMMETRY:
+		domain_D[idx].inStreams[1] = domain_D[idx].inStreams[2];
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[7];
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[6];
 		break;
-	case 3:
-		domain_D[idx].inStreams[1] = domain_D[idx].outStreams[2];
-		domain_D[idx].inStreams[5] = friction * domain_D[idx].outStreams[7] + (1.0 - friction) * domain_D[idx].outStreams[8];
-		domain_D[idx].inStreams[8] = friction * domain_D[idx].outStreams[6] + (1.0 - friction) * domain_D[idx].outStreams[7];
+	case WALL_FRICTION:
+		domain_D[idx].inStreams[1] = domain_D[idx].inStreams[2];
+		domain_D[idx].inStreams[5] = friction * domain_D[idx].inStreams[7] + (1.0 - friction) * domain_D[idx].inStreams[8];
+		domain_D[idx].inStreams[8] = friction * domain_D[idx].inStreams[6] + (1.0 - friction) * domain_D[idx].inStreams[7];
+	case CONSTANT_NORMAL_SPEED:
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] + domain_D[idx].inStreams[6] +
+			domain_D[idx].inStreams[7]) / (1.0 - BOUNDRY_W.normalVelocity);
+		domain_D[idx].u[0] = BOUNDRY_W.normalVelocity;
+		domain_D[idx].u[1] = 6.0 / domain_D[idx].ro * (domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] + domain_D[idx].inStreams[6] +
+			domain_D[idx].inStreams[7]) / (5.0 - 3.0 * BOUNDRY_W.normalVelocity);
+		domain_D[idx].inStreams[1] = domain_D[idx].inStreams[2] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_W.normalVelocity;
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_W.normalVelocity;
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_W.normalVelocity;
+
 		break;
 	}
 
@@ -229,56 +276,68 @@ __global__ void LBM_K_Boundry_W(Field* domain_D)
 
 __global__ void LBM_K_Boundry_NE(Field* domain_D)
 {
-	int idx = NX_global * NY_global - 1;
+	int idx = NX * NY - 1;
 
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
 	domain_D[idx].inStreams[1] = domain_D[idx - 1].outStreams[1];
-	domain_D[idx].inStreams[3] = domain_D[idx - NX_global].outStreams[3];
-	domain_D[idx].inStreams[5] = domain_D[idx - NX_global - 1].outStreams[5];
+	domain_D[idx].inStreams[3] = domain_D[idx - NX].outStreams[3];
+	domain_D[idx].inStreams[5] = domain_D[idx - NX - 1].outStreams[5];
 
-	if (BOUNDRY_N == 1 && BOUNDRY_E == 1)
+	if ( (BOUNDRY_N.type == 1 && BOUNDRY_E.type == 1) || (BOUNDRY_N.type == 4 && BOUNDRY_E.type == 1) || (BOUNDRY_N.type == 1 && BOUNDRY_E.type == 4) )
 	{
-		domain_D[idx].inStreams[2] = domain_D[idx].outStreams[1];
-		domain_D[idx].inStreams[4] = domain_D[idx].outStreams[3];
-		domain_D[idx].inStreams[6] = domain_D[idx].outStreams[5];
-		domain_D[idx].inStreams[7] = domain_D[idx].outStreams[5];
-		domain_D[idx].inStreams[8] = domain_D[idx].outStreams[5];
+		domain_D[idx].inStreams[2] = domain_D[idx].inStreams[1];
+		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3];
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[5];  
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5];
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[5];
+	}
+	else if (BOUNDRY_N.type == 2 && BOUNDRY_E.type == 4)
+	{
+
 	}
 }
 
 __global__ void LBM_K_Boundry_NW(Field* domain_D)
 {
-	int idx = NX_global * (NY_global - 1);
+	int idx = NX * (NY - 1);
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
 	domain_D[idx].inStreams[2] = domain_D[idx + 1].outStreams[2];
-	domain_D[idx].inStreams[3] = domain_D[idx - NX_global].outStreams[3];
-	domain_D[idx].inStreams[6] = domain_D[idx - NX_global + 1].outStreams[6];
+	domain_D[idx].inStreams[3] = domain_D[idx - NX].outStreams[3];
+	domain_D[idx].inStreams[6] = domain_D[idx - NX + 1].outStreams[6];
 
-	if (BOUNDRY_N == 1 && BOUNDRY_W == 1)
+	if ( (BOUNDRY_N.type == 1 && BOUNDRY_W.type == 1) || (BOUNDRY_N.type == 4 && BOUNDRY_W.type == 1) || (BOUNDRY_N.type == 1 && BOUNDRY_W.type == 4) )
 	{
-		domain_D[idx].inStreams[1] = domain_D[idx].outStreams[2];
-		domain_D[idx].inStreams[4] = domain_D[idx].outStreams[3];
-		domain_D[idx].inStreams[5] = domain_D[idx].outStreams[6];
-		domain_D[idx].inStreams[7] = domain_D[idx].outStreams[6];
-		domain_D[idx].inStreams[8] = domain_D[idx].outStreams[6];
+		domain_D[idx].inStreams[1] = domain_D[idx].inStreams[2];
+		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3];
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[6];
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[6];
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6];
+	}
+	else if (BOUNDRY_N.type == 2 && BOUNDRY_W.type == 4)
+	{
+
 	}
 }
 
 __global__ void LBM_K_Boundry_SE(Field* domain_D)
 {
-	int idx = NX_global - 1;
+	int idx = NX - 1;
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
 	domain_D[idx].inStreams[1] = domain_D[idx - 1].outStreams[1];
-	domain_D[idx].inStreams[4] = domain_D[idx + NX_global].outStreams[4];
-	domain_D[idx].inStreams[8] = domain_D[idx + NX_global - 1].outStreams[8];
+	domain_D[idx].inStreams[4] = domain_D[idx + NX].outStreams[4];
+	domain_D[idx].inStreams[8] = domain_D[idx + NX - 1].outStreams[8];
 
-	if (BOUNDRY_S == 1 && BOUNDRY_E == 1)
+	if ( (BOUNDRY_S.type == 1 && BOUNDRY_E.type == 1) || (BOUNDRY_S.type == 4 && BOUNDRY_E.type == 1) || (BOUNDRY_S.type == 1 && BOUNDRY_E.type == 4) )
 	{
-		domain_D[idx].inStreams[2] = domain_D[idx].outStreams[1];
-		domain_D[idx].inStreams[3] = domain_D[idx].outStreams[4];
-		domain_D[idx].inStreams[5] = domain_D[idx].outStreams[8];
-		domain_D[idx].inStreams[6] = domain_D[idx].outStreams[8];
-		domain_D[idx].inStreams[7] = domain_D[idx].outStreams[8];
+		domain_D[idx].inStreams[2] = domain_D[idx].inStreams[1];
+		domain_D[idx].inStreams[3] = domain_D[idx].inStreams[4];
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[8];
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8];
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[8];
+	}
+	else if (BOUNDRY_S.type == 2 && BOUNDRY_E.type == 4)
+	{
+
 	}
 }
 
@@ -288,27 +347,31 @@ __global__ void LBM_K_Boundry_SW(Field* domain_D)
 
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
 	domain_D[idx].inStreams[2] = domain_D[idx + 1].outStreams[2];
-	domain_D[idx].inStreams[4] = domain_D[idx + NX_global].outStreams[4];
-	domain_D[idx].inStreams[7] = domain_D[idx + NX_global + 1].outStreams[7];
+	domain_D[idx].inStreams[4] = domain_D[idx + NX].outStreams[4];
+	domain_D[idx].inStreams[7] = domain_D[idx + NX + 1].outStreams[7];
 
-	if (BOUNDRY_S == 1 && BOUNDRY_W == 1)
+	if ( ( BOUNDRY_S.type == 1 && BOUNDRY_W.type == 1 ) || (BOUNDRY_S.type == 4 && BOUNDRY_W.type == 1) || (BOUNDRY_S.type == 1 && BOUNDRY_W.type == 4) )
 	{
-		domain_D[idx].inStreams[1] = domain_D[idx].outStreams[1];
-		domain_D[idx].inStreams[3] = domain_D[idx].outStreams[3];
-		domain_D[idx].inStreams[5] = domain_D[idx].outStreams[7];
-		domain_D[idx].inStreams[6] = domain_D[idx].outStreams[7];
-		domain_D[idx].inStreams[8] = domain_D[idx].outStreams[7];
+		domain_D[idx].inStreams[1] = domain_D[idx].inStreams[2];
+		domain_D[idx].inStreams[3] = domain_D[idx].inStreams[4];
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7];
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[7];
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[7];
+	}
+	else if (BOUNDRY_S.type == 2 && BOUNDRY_W.type == 4)
+	{
+		
 	}
 }
 
 void LBM_run(LBM_Config* configuration)
 {
-	LBM_K_Equalibrium << < configuration->gridSize_Collsion, configuration->blockSize_Collsion >> > (configuration->domain_Device);
+	LBM_K_Equalibrium << < configuration->gridSize_Entire, configuration->blockSize_Entire >> > (configuration->domain_Device);
 	cudaDeviceSynchronize();
-	LBM_K_Collsion <<< configuration->gridSize_Collsion, configuration->blockSize_Collsion >> > (configuration->domain_Device);
+	LBM_K_Collsion <<< configuration->gridSize_Entire, configuration->blockSize_Entire >> > (configuration->domain_Device);
 	cudaDeviceSynchronize();
 
-	LBM_K_Streaming << < configuration->gridSize_Streaming, configuration->blockSize_Streaming >> > (configuration->domain_Device);
+	LBM_K_Streaming << < configuration->gridSize_Interior, configuration->blockSize_Interior >> > (configuration->domain_Device);
 	LBM_K_Boundry_N << < configuration->gridSize_BoundryN, configuration->blockSize_BoundryN >> > (configuration->domain_Device);
 	LBM_K_Boundry_S << < configuration->gridSize_BoundryS, configuration->blockSize_BoundryS >> > (configuration->domain_Device);
 	LBM_K_Boundry_E << < configuration->gridSize_BoundryE, configuration->blockSize_BoundryE >> > (configuration->domain_Device);
@@ -319,14 +382,14 @@ void LBM_run(LBM_Config* configuration)
 	LBM_K_Boundry_SE << <1, 1 >> > (configuration->domain_Device);
 	cudaDeviceSynchronize();
 
-	LBM_K_Variables << < configuration->gridSize_Collsion, configuration->blockSize_Collsion >> > (configuration->domain_Device);
+	LBM_K_Variables << < configuration->gridSize_Entire, configuration->blockSize_Entire >> > (configuration->domain_Device);
 	cudaDeviceSynchronize();
 }
 
 __global__ void LBM_K_Draw(Field* domain_D, float* vbo, Visualisation* visualisation_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
-		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+		NX * (threadIdx.y + blockDim.y * blockIdx.y);
 	for (int v = 0; v < 4; v++)
 	{
 		if (domain_D[idx].type == WALL) {
@@ -345,7 +408,7 @@ __global__ void LBM_K_Draw(Field* domain_D, float* vbo, Visualisation* visualisa
 __global__ void LBM_K_Draw_Density(Field* domain_D, float* vbo, Visualisation* visualisation_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
-		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+		NX * (threadIdx.y + blockDim.y * blockIdx.y);
 
 	for (int v = 0; v < 4; v++)
 	{
@@ -365,7 +428,7 @@ __global__ void LBM_K_Draw_Density(Field* domain_D, float* vbo, Visualisation* v
 __global__ void LBM_K_Draw_Velocity_Norm(Field* domain_D, float* vbo, Visualisation* visualisation_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
-		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+		NX * (threadIdx.y + blockDim.y * blockIdx.y);
 	
 	for (int v = 0; v < 4; v++)
 	{
@@ -386,7 +449,7 @@ __global__ void LBM_K_Draw_Velocity_Norm(Field* domain_D, float* vbo, Visualisat
 __global__ void LBM_K_Draw_Velocity_Horizontal(Field* domain_D, float* vbo, Visualisation* visualisation_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
-		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+		NX * (threadIdx.y + blockDim.y * blockIdx.y);
 
 	for (int v = 0; v < 4; v++)
 	{
@@ -407,7 +470,7 @@ __global__ void LBM_K_Draw_Velocity_Horizontal(Field* domain_D, float* vbo, Visu
 __global__ void LBM_K_Draw_Velocity_Vertical(Field* domain_D, float* vbo, Visualisation* visualisation_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
-		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+		NX * (threadIdx.y + blockDim.y * blockIdx.y);
 
 	for (int v = 0; v < 4; v++)
 	{
@@ -431,23 +494,23 @@ void LBM_draw(LBM_Config* configuration, float* devPtr)
 	switch (configuration->visualisation.field)
 	{
 	case 0:
-		LBM_K_Draw_Density << < configuration->gridSize_Collsion, configuration->blockSize_Collsion >> > (configuration->domain_Device, devPtr,
+		LBM_K_Draw_Density << < configuration->gridSize_Entire, configuration->blockSize_Entire >> > (configuration->domain_Device, devPtr,
 			configuration->visualisation_Device);
 		break;
 	case 1:
-		LBM_K_Draw_Velocity_Norm << < configuration->gridSize_Collsion, configuration->blockSize_Collsion >> > (configuration->domain_Device, devPtr,
+		LBM_K_Draw_Velocity_Norm << < configuration->gridSize_Entire, configuration->blockSize_Entire >> > (configuration->domain_Device, devPtr,
 			configuration->visualisation_Device);
 		break;
 	case 2:
-		LBM_K_Draw_Velocity_Horizontal << < configuration->gridSize_Collsion, configuration->blockSize_Collsion >> > (configuration->domain_Device, devPtr,
+		LBM_K_Draw_Velocity_Horizontal << < configuration->gridSize_Entire, configuration->blockSize_Entire >> > (configuration->domain_Device, devPtr,
 			configuration->visualisation_Device);
 		break;
 	case 3:
-		LBM_K_Draw_Velocity_Vertical << < configuration->gridSize_Collsion, configuration->blockSize_Collsion >> > (configuration->domain_Device, devPtr,
+		LBM_K_Draw_Velocity_Vertical << < configuration->gridSize_Entire, configuration->blockSize_Entire >> > (configuration->domain_Device, devPtr,
 			configuration->visualisation_Device);
 		break;
 	default:
-		LBM_K_Draw << < configuration->gridSize_Collsion, configuration->blockSize_Collsion >> > (configuration->domain_Device, devPtr,
+		LBM_K_Draw << < configuration->gridSize_Entire, configuration->blockSize_Entire >> > (configuration->domain_Device, devPtr,
 			configuration->visualisation_Device);
 		break;
 	}
@@ -456,8 +519,8 @@ void LBM_draw(LBM_Config* configuration, float* devPtr)
 
 void setConstantMemory(LBM_Config* config)
 {
-	cudaMemcpyToSymbol(NX_global, &config->nx, sizeof(unsigned int));
-	cudaMemcpyToSymbol(NY_global, &config->ny, sizeof(unsigned int));
+	cudaMemcpyToSymbol(NX, &config->nx, sizeof(unsigned int));
+	cudaMemcpyToSymbol(NY, &config->ny, sizeof(unsigned int));
 	double time_coef = 1.0 / config->relaxationTime;
 	cudaMemcpyToSymbol(Time_coef, &time_coef, sizeof(double), 0, cudaMemcpyHostToDevice);
 	double c1 =  (config->flow == 1) ? 1.0 / (config->cs * config->cs): 0;
@@ -466,16 +529,16 @@ void setConstantMemory(LBM_Config* config)
 	cudaMemcpyToSymbol(COEF_1, &c1, sizeof(double), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(COEF_2, &c1, sizeof(double), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(COEF_3, &c1, sizeof(double), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(BOUNDRY_N, &(config->boundryN.type), sizeof(int), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(BOUNDRY_S, &(config->boundryS.type), sizeof(int), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(BOUNDRY_E, &(config->boundryE.type), sizeof(int), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(BOUNDRY_W, &(config->boundryW.type), sizeof(int), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(BOUNDRY_N, &(config->boundryN), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(BOUNDRY_S, &(config->boundryS), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(BOUNDRY_E, &(config->boundryE), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(BOUNDRY_W, &(config->boundryW), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
 }
 
 __global__ void LBM_K_Equalibrium(Field* domain_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x +
-		NX_global * (threadIdx.y + blockDim.y * blockIdx.y);
+		NX * (threadIdx.y + blockDim.y * blockIdx.y);
 	if (domain_D[idx].type == WALL) {
 		return;
 	}

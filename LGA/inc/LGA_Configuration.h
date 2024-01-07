@@ -4,6 +4,7 @@
 #include<device_launch_parameters.h>
 #include"..\inc\CommonTypes.h"
 
+
 typedef struct
 {
 	int field;
@@ -14,6 +15,11 @@ typedef struct
 typedef struct
 {
 	int type;
+	double normalVelocity;
+	double normalVelocityGrowRate;
+	double parallelVelocity;
+	double parallelVelocityGrowRate;
+	double density;
 }BoundryCondition;
 
 typedef struct
@@ -33,11 +39,11 @@ typedef struct
 
 	// CUDA related variables //
 
-	dim3 blockSize_Streaming;
-	dim3 gridSize_Streaming;
+	dim3 blockSize_Interior;
+	dim3 gridSize_Interior;
 
-	dim3 blockSize_Collsion;
-	dim3 gridSize_Collsion;
+	dim3 blockSize_Entire;
+	dim3 gridSize_Entire;
 
 	int blockSize_BoundryN;
 	int gridSize_BoundryN;

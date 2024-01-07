@@ -5,19 +5,19 @@
 
 void calculateBlockSize(LBM_Config* config)
 {
-	config->blockSize_Collsion.x = 32;
-	config->blockSize_Collsion.y = 32;
-	config->blockSize_Collsion.z = 1;
-	dim3 grid = { (config->nx + config->blockSize_Collsion.x - 1) / config->blockSize_Collsion.x,
-			(config->ny + config->blockSize_Collsion.y - 1) / config->blockSize_Collsion.y, 1 };
-	config->gridSize_Collsion = grid;
+	config->blockSize_Entire.x = 32;
+	config->blockSize_Entire.y = 32;
+	config->blockSize_Entire.z = 1;
+	dim3 grid = { (config->nx + config->blockSize_Entire.x - 1) / config->blockSize_Entire.x,
+			(config->ny + config->blockSize_Entire.y - 1) / config->blockSize_Entire.y, 1 };
+	config->gridSize_Entire = grid;
 
-	config->blockSize_Streaming.x = 32;
-	config->blockSize_Streaming.y = 32;
-	config->blockSize_Streaming.z = 1;
-	grid = { (config->nx - 2 + config->blockSize_Streaming.x - 1) / config->blockSize_Streaming.x,
-			(config->ny - 2 + config->blockSize_Streaming.y - 1) / config->blockSize_Streaming.y, 1 };
-	config->gridSize_Streaming = grid;
+	config->blockSize_Interior.x = 32;
+	config->blockSize_Interior.y = 32;
+	config->blockSize_Interior.z = 1;
+	grid = { (config->nx - 2 + config->blockSize_Interior.x - 1) / config->blockSize_Interior.x,
+			(config->ny - 2 + config->blockSize_Interior.y - 1) / config->blockSize_Interior.y, 1 };
+	config->gridSize_Interior = grid;
 
 	config->blockSize_BoundryE = 32;
 	config->gridSize_BoundryE = (config->ny - 2 + config->blockSize_BoundryE - 1)/ config->blockSize_BoundryE;

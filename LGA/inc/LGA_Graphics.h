@@ -3,6 +3,8 @@
 #include<cuda_gl_interop.h>
 #include "LGA_Configuration.h"
 
+
+
 typedef struct
 {
 	GLuint vao;

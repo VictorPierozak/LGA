@@ -3,11 +3,15 @@
 #include<stdio.h>
 #include<string.h>
 
-#define NX 256
-#define NY 256
-
 #define EMPTY_SPACE 0
 #define WALL 1
+
+#define BOUNCY_BACK 1
+#define SYMMETRY 2
+#define WALL_FRICTION 3
+#define CONSTANT_NORMAL_SPEED 4
+
+// VISUALISATION //
 
 #define POS_LOCATION 0
 #define COLOR_LOCATION 1
