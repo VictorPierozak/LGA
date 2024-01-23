@@ -96,6 +96,8 @@ __global__ void LBM_K_Variables(Field* domain_D)
 __global__ void LBM_K_Boundry_S(Field* domain_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x + 1;
+	double pos = ((double)idx - 1);
+
 	if (idx >= NX- 1) return;
 	domain_D[idx].inStreams[4] = domain_D[idx + NX].outStreams[4];
 	domain_D[idx].inStreams[1] = domain_D[idx-1].outStreams[1];
@@ -122,14 +124,31 @@ __global__ void LBM_K_Boundry_S(Field* domain_D)
 		domain_D[idx].inStreams[6] = friction * domain_D[idx].inStreams[8] + (1.0 - friction) * domain_D[idx].inStreams[7];
 		break;
 	case CONSTANT_NORMAL_SPEED:
+	{
+		double vn0 = BOUNDRY_S.vn0 + BOUNDRY_S.d_vn * pos;
+
 		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[1] + domain_D[idx].inStreams[2] +
-			 domain_D[idx].inStreams[7] + domain_D[idx].inStreams[8]) / (1.0 - BOUNDRY_S.normalVelocity);
-		domain_D[idx].u[1] = BOUNDRY_S.normalVelocity;
+			2 * domain_D[idx].inStreams[4] + 2 * domain_D[idx].inStreams[7] + 2 * domain_D[idx].inStreams[8]) / (1.0 - vn0);
+		domain_D[idx].u[1] = vn0;
 		domain_D[idx].u[0] = 6.0 / domain_D[idx].ro * (domain_D[idx].inStreams[1] + domain_D[idx].inStreams[2] + domain_D[idx].inStreams[7] +
-			domain_D[idx].inStreams[8])/(5.0 - 3.0*BOUNDRY_S.normalVelocity);
-		domain_D[idx].inStreams[3] = domain_D[idx].inStreams[4] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_S.normalVelocity;
-		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_S.normalVelocity;
-		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8] + 2.0 / 3.0 * domain_D[idx].ro + BOUNDRY_S.normalVelocity;
+			domain_D[idx].inStreams[8]) / (5.0 - 3.0 * vn0);
+		domain_D[idx].inStreams[3] = domain_D[idx].inStreams[4] + 2.0 / 3.0 * domain_D[idx].ro * vn0;
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[0]);
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 - domain_D[idx].u[0]);
+	}
+		break;
+	case CONSTANT_VELOCITY:
+	{
+		double vn0 = BOUNDRY_S.vn0 + BOUNDRY_S.d_vn * pos;
+
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[1] + domain_D[idx].inStreams[2] +
+			2 * domain_D[idx].inStreams[4] + 2 * domain_D[idx].inStreams[7] + 2 * domain_D[idx].inStreams[8]) / (1.0 - vn0);
+		domain_D[idx].u[1] = vn0;
+		domain_D[idx].u[0] = BOUNDRY_S.vt0 + BOUNDRY_S.d_vt * pos;
+		domain_D[idx].inStreams[3] = domain_D[idx].inStreams[4] + 2.0 / 3.0 * domain_D[idx].ro * vn0;
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[0]);
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 - domain_D[idx].u[0]);
+	}
 		break;
 	}
 	
@@ -138,6 +157,8 @@ __global__ void LBM_K_Boundry_S(Field* domain_D)
 __global__ void LBM_K_Boundry_N(Field* domain_D)
 {
 	int idx = threadIdx.x + blockDim.x * blockIdx.x + 1 + NX * (NY - 1);
+	double pos = ((double)(threadIdx.x + blockDim.x * blockIdx.x));
+
 	if (idx >= NX * NY - 1) return;
 
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
@@ -164,19 +185,32 @@ __global__ void LBM_K_Boundry_N(Field* domain_D)
 		domain_D[idx].inStreams[7] = friction * domain_D[idx].inStreams[5] + (1.0 - friction) * domain_D[idx].inStreams[6];
 		domain_D[idx].inStreams[8] = friction * domain_D[idx].inStreams[6] + (1.0 - friction) * domain_D[idx].inStreams[5];
 		break;
-	case CONSTANT_NORMAL_SPEED: 
+	case CONSTANT_NORMAL_SPEED:
+	{
+		double vn0 = BOUNDRY_N.vn0 + BOUNDRY_N.d_vn * pos;
 		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[1] + domain_D[idx].inStreams[2] +
-			domain_D[idx].inStreams[5] + domain_D[idx].inStreams[6]) / (1.0 - BOUNDRY_N.normalVelocity);
-		domain_D[idx].u[1] = BOUNDRY_N.normalVelocity;
+			+2 * domain_D[idx].inStreams[3] + 2 * domain_D[idx].inStreams[5] + 2 * domain_D[idx].inStreams[6]) / (1.0 - vn0);
+		domain_D[idx].u[1] = vn0;
 		domain_D[idx].u[0] = 6.0 / domain_D[idx].ro * (domain_D[idx].inStreams[1] + domain_D[idx].inStreams[2] + domain_D[idx].inStreams[5] +
-			domain_D[idx].inStreams[6]) / (5.0 - 3.0 * BOUNDRY_N.normalVelocity);
-		
-		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_N.normalVelocity;
-		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_N.normalVelocity;
-		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_N.normalVelocity;
-		
+			domain_D[idx].inStreams[6]) / (5.0 - 3.0 * vn0);
+
+		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3] + 2.0 / 3.0 * domain_D[idx].ro * vn0;
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[0]);
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 - domain_D[idx].u[0]);
+	}
 		break;
-	case 5:
+	case CONSTANT_VELOCITY:
+	{
+		double vn0 = BOUNDRY_N.vn0 + BOUNDRY_N.d_vn * pos;
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[1] + domain_D[idx].inStreams[2] +
+			+2 * domain_D[idx].inStreams[3] + 2 * domain_D[idx].inStreams[5] + 2 * domain_D[idx].inStreams[6]) / (1.0 - vn0);
+		domain_D[idx].u[1] = vn0;
+		domain_D[idx].u[0] = BOUNDRY_N.vt0 + BOUNDRY_N.d_vt * pos;
+
+		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3] + 2.0 / 3.0 * domain_D[idx].ro * vn0;
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[0]);
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 - domain_D[idx].u[0]);
+	}
 		break;
 	default:
 		return;
@@ -188,8 +222,8 @@ __global__ void LBM_K_Boundry_N(Field* domain_D)
 __global__ void LBM_K_Boundry_E(Field* domain_D)
 {
 	if (threadIdx.x + blockDim.x * blockIdx.x + 1 >= NY) return;
-	int boundryIdx = threadIdx.x + blockDim.x * blockIdx.x + 1;
-	int idx = boundryIdx * (NX) + NX - 1;
+	int idx = (threadIdx.x + blockDim.x * blockIdx.x + 1) * (NX) + NX - 1;
+	double pos = (double)(threadIdx.x + blockDim.x * blockIdx.x);
 	
 
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
@@ -217,15 +251,29 @@ __global__ void LBM_K_Boundry_E(Field* domain_D)
 		domain_D[idx].inStreams[7] = friction * domain_D[idx].inStreams[5] + (1.0 - friction) * domain_D[idx].inStreams[8];
 		break;
 	case CONSTANT_NORMAL_SPEED:
-		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] + domain_D[idx].inStreams[5] +
-			domain_D[idx].inStreams[8]) / (1.0 - BOUNDRY_E.normalVelocity);
-		domain_D[idx].u[0] = BOUNDRY_E.normalVelocity;
+	{
+		double vn0 = BOUNDRY_E.vn0 + BOUNDRY_E.d_vn * pos;
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] +
+			2 * domain_D[idx].inStreams[1] + 2 * domain_D[idx].inStreams[5] + 2 * domain_D[idx].inStreams[8]) / (1.0 - vn0);
+		domain_D[idx].u[0] = vn0;
 		domain_D[idx].u[1] = 6.0 / domain_D[idx].ro * (domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] + domain_D[idx].inStreams[5] +
-			domain_D[idx].inStreams[8]) / (5.0 - 3.0 * BOUNDRY_E.normalVelocity);
-		domain_D[idx].inStreams[2] = domain_D[idx].inStreams[1] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_E.normalVelocity;
-		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_E.normalVelocity;
-		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_E.normalVelocity;
-
+			domain_D[idx].inStreams[8]) / (5.0 - 3.0 * vn0);
+		domain_D[idx].inStreams[2] = domain_D[idx].inStreams[1] + 2.0 / 3.0 * domain_D[idx].ro * vn0;
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[1]);
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 - domain_D[idx].u[1]);
+	}
+		break;
+	case CONSTANT_VELOCITY:
+	{
+		double vn0 = BOUNDRY_E.vn0 + BOUNDRY_E.d_vn * pos;
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] +
+			2 * domain_D[idx].inStreams[1] + 2 * domain_D[idx].inStreams[5] + 2 * domain_D[idx].inStreams[8]) / (1.0 - vn0);
+		domain_D[idx].u[0] = vn0;
+		domain_D[idx].u[1] = BOUNDRY_E.vt0 + BOUNDRY_E.d_vt * pos;
+		domain_D[idx].inStreams[2] = domain_D[idx].inStreams[1] + 2.0 / 3.0 * domain_D[idx].ro * vn0;
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[1]);
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 - domain_D[idx].u[1]);
+	}
 		break;
 	}
 
@@ -235,6 +283,7 @@ __global__ void LBM_K_Boundry_W(Field* domain_D)
 {
 	if (threadIdx.x + blockDim.x * blockIdx.x + 1 >= NY) return;
 	int idx = (threadIdx.x + blockDim.x * blockIdx.x + 1) * (NX);
+	double pos = (double)(threadIdx.x + blockDim.x * blockIdx.x);
 
 	domain_D[idx].inStreams[0] = domain_D[idx].outStreams[0];
 	domain_D[idx].inStreams[2] = domain_D[idx + 1].outStreams[2];
@@ -260,15 +309,29 @@ __global__ void LBM_K_Boundry_W(Field* domain_D)
 		domain_D[idx].inStreams[5] = friction * domain_D[idx].inStreams[7] + (1.0 - friction) * domain_D[idx].inStreams[8];
 		domain_D[idx].inStreams[8] = friction * domain_D[idx].inStreams[6] + (1.0 - friction) * domain_D[idx].inStreams[7];
 	case CONSTANT_NORMAL_SPEED:
-		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] + domain_D[idx].inStreams[6] +
-			domain_D[idx].inStreams[7]) / (1.0 - BOUNDRY_W.normalVelocity);
-		domain_D[idx].u[0] = BOUNDRY_W.normalVelocity;
+	{
+		double vn0 = BOUNDRY_W.vn0 + BOUNDRY_W.d_vn * pos;
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] +
+			+2 * domain_D[idx].inStreams[2] + 2 * domain_D[idx].inStreams[6] + 2 * domain_D[idx].inStreams[7]) / (1.0 - vn0);
+		domain_D[idx].u[0] = BOUNDRY_W.vn0;
 		domain_D[idx].u[1] = 6.0 / domain_D[idx].ro * (domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] + domain_D[idx].inStreams[6] +
-			domain_D[idx].inStreams[7]) / (5.0 - 3.0 * BOUNDRY_W.normalVelocity);
-		domain_D[idx].inStreams[1] = domain_D[idx].inStreams[2] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_W.normalVelocity;
-		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_W.normalVelocity;
-		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6] + 2.0 / 3.0 * domain_D[idx].ro * BOUNDRY_W.normalVelocity;
-
+			domain_D[idx].inStreams[7]) / (5.0 - 3.0 * vn0);
+		domain_D[idx].inStreams[1] = domain_D[idx].inStreams[2] + 2.0 / 3.0 * domain_D[idx].ro * vn0;
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 - domain_D[idx].u[1]);
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[1]);
+	}
+		break;
+	case CONSTANT_VELOCITY:
+	{
+		double vn0 = BOUNDRY_W.vn0 + BOUNDRY_W.d_vn * pos;
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + domain_D[idx].inStreams[3] + domain_D[idx].inStreams[4] +
+			+2 * domain_D[idx].inStreams[2] + 2 * domain_D[idx].inStreams[6] + 2 * domain_D[idx].inStreams[7]) / (1.0 - vn0);
+		domain_D[idx].u[0] = vn0;
+		domain_D[idx].u[1] = BOUNDRY_W.vt0 + BOUNDRY_W.d_vt * pos;
+		domain_D[idx].inStreams[1] = domain_D[idx].inStreams[2] + 2.0 / 3.0 * domain_D[idx].ro * vn0;
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 - domain_D[idx].u[1]);
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[1]); 
+	}
 		break;
 	}
 
@@ -291,9 +354,23 @@ __global__ void LBM_K_Boundry_NE(Field* domain_D)
 		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5];
 		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[5];
 	}
-	else if (BOUNDRY_N.type == 2 && BOUNDRY_E.type == 4)
+	else if ( BOUNDRY_N .type != BOUNDRY_E.type) // inflow/outflow E
 	{
-
+		double vn0 = BOUNDRY_E.vn0 + BOUNDRY_E.d_vn * (NY-1);
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + 2.0 * domain_D[idx].inStreams[3] + 2.0 * domain_D[idx].inStreams[1] + 4.0 * domain_D[idx].inStreams[5]) / (1.0 - vn0);
+		if (BOUNDRY_N.type == CONSTANT_VELOCITY)
+		{
+			domain_D[idx].u[1] = BOUNDRY_N.vn0;
+		}
+		else
+		{
+			domain_D[idx].u[1] = 0;
+			domain_D[idx].u[0] = vn0;
+		}
+		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3];
+		domain_D[idx].inStreams[2] = domain_D[idx].inStreams[1] + 2.0 / 3.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[1]);
+		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[5];
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[5] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[1]);
 	}
 }
 
@@ -313,8 +390,16 @@ __global__ void LBM_K_Boundry_NW(Field* domain_D)
 		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[6];
 		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6];
 	}
-	else if (BOUNDRY_N.type == 2 && BOUNDRY_W.type == 4)
+	else if (BOUNDRY_N.type != BOUNDRY_W.type && BOUNDRY_W.type == CONSTANT_NORMAL_SPEED) //inflow/outflow W
 	{
+		double vn0 = BOUNDRY_W.vn0 + BOUNDRY_W.d_vn * (NY - 1);
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + 2.0 * domain_D[idx].inStreams[3] + 2.0 * domain_D[idx].inStreams[2] + 4.0 * domain_D[idx].inStreams[6]) / (1.0 - vn0);
+		domain_D[idx].u[1] = 0;
+		domain_D[idx].u[0] = vn0;
+		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3];
+		domain_D[idx].inStreams[1] = domain_D[idx].inStreams[2] + 2.0 / 3.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[1]);
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[6];
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[6] + 1.0 / 6.0 * domain_D[idx].ro * (vn0 + domain_D[idx].u[1]);
 
 	}
 }
@@ -335,10 +420,19 @@ __global__ void LBM_K_Boundry_SE(Field* domain_D)
 		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[8];
 		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[8];
 	}
-	else if (BOUNDRY_S.type == 2 && BOUNDRY_E.type == 4)
+	else if (BOUNDRY_S.type != BOUNDRY_E.type) // inflow/outflow E
 	{
+		double vn0 = BOUNDRY_E.vn0;
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + 2 * domain_D[idx].inStreams[1] + 2 * domain_D[idx].inStreams[4] + 4 * domain_D[idx].inStreams[8]) / (1.0 - vn0);
+		domain_D[idx].u[1] = 0;
+		domain_D[idx].u[0] = vn0;
+		domain_D[idx].inStreams[3] = domain_D[idx].inStreams[4];
+		domain_D[idx].inStreams[2] = domain_D[idx].inStreams[1] + 2.0 / 3.0 * domain_D[idx].ro * vn0;
+		domain_D[idx].inStreams[7] = domain_D[idx].inStreams[8];
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[8] + 1.0 / 6.0 * domain_D[idx].ro * vn0;
 
 	}
+	
 }
 
 __global__ void LBM_K_Boundry_SW(Field* domain_D)
@@ -358,10 +452,19 @@ __global__ void LBM_K_Boundry_SW(Field* domain_D)
 		domain_D[idx].inStreams[6] = domain_D[idx].inStreams[7];
 		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[7];
 	}
-	else if (BOUNDRY_S.type == 2 && BOUNDRY_W.type == 4)
+	else if (BOUNDRY_S.type != BOUNDRY_W.type) //inflow/outflow W
 	{
-		
+		double vn0 = BOUNDRY_W.vn0;
+		domain_D[idx].ro = (domain_D[idx].inStreams[0] + 2.0 * domain_D[idx].inStreams[4] + 2.0 * domain_D[idx].inStreams[2] + 4.0 * domain_D[idx].inStreams[7]) / (1.0 - vn0);
+		domain_D[idx].u[1] = 0;
+		domain_D[idx].u[0] = vn0;
+		domain_D[idx].inStreams[4] = domain_D[idx].inStreams[3];
+		domain_D[idx].inStreams[1] = domain_D[idx].inStreams[2] + 2.0 / 3.0 * domain_D[idx].ro * vn0;
+		domain_D[idx].inStreams[5] = domain_D[idx].inStreams[7];
+		domain_D[idx].inStreams[8] = domain_D[idx].inStreams[7] + 1.0 / 6.0 * domain_D[idx].ro * vn0;
+
 	}
+	
 }
 
 void LBM_run(LBM_Config* configuration)
@@ -529,10 +632,10 @@ void setConstantMemory(LBM_Config* config)
 	cudaMemcpyToSymbol(COEF_1, &c1, sizeof(double), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(COEF_2, &c1, sizeof(double), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(COEF_3, &c1, sizeof(double), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(BOUNDRY_N, &(config->boundryN), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(BOUNDRY_S, &(config->boundryS), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(BOUNDRY_E, &(config->boundryE), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(BOUNDRY_W, &(config->boundryW), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(BOUNDRY_N, &(config->northBC), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(BOUNDRY_S, &(config->southBC), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(BOUNDRY_E, &(config->eastBC), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(BOUNDRY_W, &(config->westBC), sizeof(BoundryCondition), 0, cudaMemcpyHostToDevice);
 }
 
 __global__ void LBM_K_Equalibrium(Field* domain_D)

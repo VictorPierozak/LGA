@@ -15,10 +15,10 @@ typedef struct
 typedef struct
 {
 	int type;
-	double normalVelocity;
-	double normalVelocityGrowRate;
-	double parallelVelocity;
-	double parallelVelocityGrowRate;
+	double vn0;
+	double d_vn;
+	double vt0;
+	double d_vt;
 	double density;
 }BoundryCondition;
 
@@ -61,10 +61,10 @@ typedef struct
 	double defaultRo;
 	double v0[2];
 
-	BoundryCondition boundryN;
-	BoundryCondition boundryS;
-	BoundryCondition boundryW;
-	BoundryCondition boundryE;
+	BoundryCondition northBC;
+	BoundryCondition southBC;
+	BoundryCondition westBC;
+	BoundryCondition eastBC;
 
 	Visualisation visualisation;
 	Visualisation* visualisation_Device;
@@ -82,3 +82,12 @@ void copyDomainFromDevice(LBM_Config* config);
 void printLGAConfig(const LBM_Config* config);
 void calcRelaxationTime(LBM_Config* config);
 void calcLatticeSoundSpeed(LBM_Config* config);
+
+void setBC_NormalVelocity(LBM_Config* config, int boundry, double normalVelocity);
+void setBC_NormalVelocity(LBM_Config* config, int boundry, double v0, double v1);
+void setBC_ConstantVelocity(LBM_Config* config, int boundry, double vn0, double vn1, double vt0, double vt1);
+void setBC_BouncyBack(LBM_Config* config, int boundry);
+void setBC_Symmetry(LBM_Config* config, int boundry);
+
+void initLBM(LBM_Config** config, double length, int nx, int ny, int flow, double mach);
+

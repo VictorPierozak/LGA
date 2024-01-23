@@ -74,3 +74,149 @@ void calcLatticeSoundSpeed(LBM_Config* config)
 	config->cs = config->dx / (config->dt * sqrt(3));
 }
 
+void setBC_NormalVelocity(LBM_Config* config, int boundry, double normalVelocity)
+{
+	switch (boundry)
+	{
+	case NORTH:
+		config->northBC.type = CONSTANT_NORMAL_SPEED;
+		config->northBC.vn0 = normalVelocity;
+		config->northBC.d_vn = 0;
+		break;
+	case SOUTH:
+		config->southBC.type = CONSTANT_NORMAL_SPEED;
+		config->southBC.vn0 = normalVelocity;
+		config->southBC.d_vn = 0;
+		break;
+	case EAST:
+		config->eastBC.type = CONSTANT_NORMAL_SPEED;
+		config->eastBC.vn0 = normalVelocity;
+		config->eastBC.d_vn = 0;
+		break;
+	case WEST:
+		config->westBC.type = CONSTANT_NORMAL_SPEED;
+		config->westBC.vn0 = normalVelocity;
+		config->westBC.d_vn = 0;
+		break;
+	default:
+		break;
+	}
+}
+
+void setBC_NormalVelocity(LBM_Config* config, int boundry, double v0, double v1)
+{
+	switch (boundry)
+	{
+	case NORTH:
+		config->northBC.type = CONSTANT_NORMAL_SPEED;
+		config->northBC.vn0 = v0;
+		config->northBC.d_vn = (v1 - v0) / (double)config->nx;
+		break;
+	case SOUTH:
+		config->southBC.type = CONSTANT_NORMAL_SPEED;
+		config->southBC.vn0 = v0;
+		config->southBC.d_vn = (v1 - v0) / (double)config->nx;
+		break;
+	case WEST:
+		config->westBC.type = CONSTANT_NORMAL_SPEED;
+		config->westBC.vn0 = v0;
+		config->westBC.d_vn = (v1 - v0) / (double)config->ny;
+		break;
+	case EAST:
+		config->eastBC.type = CONSTANT_NORMAL_SPEED;
+		config->eastBC.vn0 = v0;
+		config->eastBC.d_vn = (v1 - v0) / (double)config->ny;
+		break;
+	}
+}
+
+void setBC_BouncyBack(LBM_Config* config, int boundry)
+{
+	switch (boundry)
+	{
+	case NORTH:
+		config->northBC.type = BOUNCY_BACK;
+		break;
+	case SOUTH:
+		config->southBC.type = BOUNCY_BACK;
+		break;
+	case EAST:
+		config->eastBC.type = BOUNCY_BACK;
+		break;
+	case WEST:
+		config->westBC.type = BOUNCY_BACK;
+		break;
+	default:
+		break;
+	}
+}
+void setBC_Symmetry(LBM_Config* config, int boundry)
+{
+	switch (boundry)
+	{
+	case NORTH:
+		config->northBC.type = SYMMETRY;
+		break;
+	case SOUTH:
+		config->southBC.type = SYMMETRY;
+		break;
+	case EAST:
+		config->eastBC.type = SYMMETRY;
+		break;
+	case WEST:
+		config->westBC.type = SYMMETRY;
+		break;
+	default:
+		break;
+	}
+}
+
+void setBC_ConstantVelocity(LBM_Config* config, int boundry, double vn0, double vn1, double vt0, double vt1)
+{
+	switch (boundry)
+	{
+	case NORTH:
+		config->northBC.type = CONSTANT_VELOCITY;
+		config->northBC.vn0 = vn0;
+		config->northBC.d_vn = (vn1 - vn0) / (double)config->nx;
+		config->northBC.vt0 = vt0;
+		config->northBC.d_vt = (vt1 - vt0) / (double)config->nx;
+		break;
+
+	case SOUTH:
+		config->southBC.type = CONSTANT_VELOCITY;
+		config->southBC.vn0 = vn0;
+		config->southBC.d_vn = (vn1 - vn0) / (double)config->nx;
+		config->southBC.vt0 = vt0;
+		config->southBC.d_vt = (vt1 - vt0) / (double)config->nx;
+		break;
+	case WEST:
+		config->westBC.type = CONSTANT_VELOCITY;
+		config->westBC.vn0 = vn0;
+		config->westBC.d_vn = (vn1 - vn0) / (double)config->ny;
+		config->westBC.vt0 = vt0;
+		config->westBC.d_vt = (vt1 - vt0) / (double)config->ny;
+		break;
+	case EAST:
+		config->eastBC.type = CONSTANT_VELOCITY;
+		config->eastBC.vn0 = vn0;
+		config->eastBC.d_vn = (vn1 - vn0) / (double)config->ny;
+		config->eastBC.vt0 = vt0;
+		config->eastBC.d_vt = (vt1 - vt0) / (double)config->ny;
+		break;
+	}
+}
+
+void initLBM(LBM_Config** config, double length, int nx, int ny, int flow, double mach)
+{
+	(*config) = (LBM_Config*)malloc(sizeof(LBM_Config));
+	(* config)->domain_Device = NULL;
+	(* config)->domain_Host = NULL;
+	(* config)->isWorking = 0;
+	(*config)->shutDown = 0;
+	(*config)->nx = nx;
+	(*config)->ny = ny;
+	(*config)->flow = flow;
+	(*config)->dx = length / (double)nx;
+	(*config)->dt = (*config)->dx * mach;
+}

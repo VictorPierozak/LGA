@@ -10,6 +10,15 @@
 #define SYMMETRY 2
 #define WALL_FRICTION 3
 #define CONSTANT_NORMAL_SPEED 4
+#define CONSTANT_VELOCITY 5
+
+#define NORTH 0
+#define SOUTH 1
+#define EAST 2
+#define WEST 3
+
+#define FLOW 1
+#define DIFFUSION 0
 
 // VISUALISATION //
 
